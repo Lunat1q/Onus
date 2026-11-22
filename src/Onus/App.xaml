@@ -1,0 +1,54 @@
+<Application x:Class="Onus.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Onus.ViewModels"
+             xmlns:v="clr-namespace:Onus.Views"
+             ThemeMode="Dark"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Styles.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Tint Fluent controls (sliders, checkboxes, focus lines) with the app accent instead of the Windows accent.
+                 Declared here, not in Styles.xaml: the Fluent dictionary is merged after ours and would win. -->
+            <Color x:Key="SystemAccentColor">#A855F7</Color>
+            <Color x:Key="SystemAccentColorLight1">#B57BFA</Color>
+            <Color x:Key="SystemAccentColorLight2">#C79CFB</Color>
+            <Color x:Key="SystemAccentColorLight3">#D9BDFD</Color>
+            <Color x:Key="SystemAccentColorDark1">#9333EA</Color>
+            <Color x:Key="SystemAccentColorDark2">#7E22CE</Color>
+            <Color x:Key="SystemAccentColorDark3">#6B21A8</Color>
+            <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#C79CFB" />
+            <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#E6C79CFB" />
+            <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#CCC79CFB" />
+            <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#D9BDFD" />
+            <SolidColorBrush x:Key="SliderThumbBackground" Color="#C79CFB" />
+            <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#D9BDFD" />
+            <SolidColorBrush x:Key="SliderInnerThumb" Color="#C79CFB" />
+            <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillChecked" Color="#C79CFB" />
+            <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPointerOver" Color="#D9BDFD" />
+            <SolidColorBrush x:Key="CheckBoxCheckBackgroundFillCheckedPressed" Color="#B57BFA" />
+            <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeChecked" Color="#C79CFB" />
+            <SolidColorBrush x:Key="CheckBoxCheckBackgroundStrokeCheckedPointerOver" Color="#D9BDFD" />
+            <SolidColorBrush x:Key="AccentDefaultBrush" Color="#C79CFB" />
+            <SolidColorBrush x:Key="AccentFillColorPrimaryBrush" Color="#C79CFB" />
+            <SolidColorBrush x:Key="AccentFillColorSelectedTextBackgroundBrush" Color="#A855F7" />
+
+            <v:ImageConverter x:Key="Img" />
+            <v:VisibleConverter x:Key="Visible" />
+            <v:MatchConverter x:Key="Match" />
+            <v:HasValueConverter x:Key="HasValue" />
+            <v:SecondsConverter x:Key="Time" />
+            <v:TagConverter x:Key="Tag" />
+
+            <!-- Page view models → views. -->
+            <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><v:DashboardView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:LibraryViewModel}"><v:LibraryView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:CloudViewModel}"><v:CloudView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:VaultViewModel}"><v:VaultView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView /></DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

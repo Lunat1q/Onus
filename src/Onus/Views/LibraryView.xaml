@@ -1,0 +1,174 @@
+<UserControl x:Class="Onus.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Onus.ViewModels">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource SubtleButton}" Command="{Binding ShuffleAllCommand}" Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xE8B1;" FontSize="13" />
+                        <TextBlock Text="Shuffle" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
+                <Button Style="{StaticResource AccentButton}" Command="{Binding PlayCommand}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Glyph}" Text="&#xF5B0;" FontSize="13" />
+                        <TextBlock Text="Play all" Margin="8,0,0,0" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+            <StackPanel>
+                <TextBlock Text="Library" Style="{StaticResource PageTitle}" />
+                <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Toolbar -->
+        <DockPanel Grid.Row="1" Margin="0,22,0,10">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Sort" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox Width="130" ItemsSource="{x:Static vm:LibraryViewModel.SortOptions}" SelectedItem="{Binding SortBy}" />
+                <Button Style="{StaticResource IconButton}" Margin="8,0,0,0" Content="&#xE72C;" ToolTip="Rescan folder"
+                        Command="{Binding RescanCommand}" />
+                <Button Style="{StaticResource IconButton}" Content="&#xE838;" ToolTip="Open download folder"
+                        Command="{Binding OpenFolderCommand}" />
+            </StackPanel>
+            <Grid Width="300" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=150}" Padding="34,6,10,6" />
+                <TextBlock Style="{StaticResource Glyph}" Text="&#xE721;" FontSize="13" HorizontalAlignment="Left" Margin="12,0,0,0"
+                           Foreground="{StaticResource FaintBrush}" IsHitTestVisible="False" />
+                <TextBlock Style="{StaticResource Hint}" Margin="34,0,0,0" Text="Search title, artist, style…" Tag="{Binding Text, ElementName=SearchBox}" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="16,8,0,0" VerticalAlignment="Center">
+                <RadioButton Style="{StaticResource ChipRadio}" Content="All" GroupName="tagf"
+                             IsChecked="{Binding TagFilter, Converter={StaticResource Match}, ConverterParameter=''}" />
+                <RadioButton Style="{StaticResource ChipRadio}" Content="Kept" GroupName="tagf"
+                             IsChecked="{Binding TagFilter, Converter={StaticResource Match}, ConverterParameter=keep}" />
+                <RadioButton Style="{StaticResource ChipRadio}" Content="Starred" GroupName="tagf"
+                             IsChecked="{Binding TagFilter, Converter={StaticResource Match}, ConverterParameter=star}" />
+                <RadioButton Style="{StaticResource ChipRadio}" Content="Trash" GroupName="tagf"
+                             IsChecked="{Binding TagFilter, Converter={StaticResource Match}, ConverterParameter=trash}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Column header -->
+        <Grid Grid.Row="2" Margin="10,4,26,6" TextElement.Foreground="{StaticResource FaintBrush}" TextElement.FontSize="11.5">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="58" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="56" />
+                <ColumnDefinition Width="64" />
+                <ColumnDefinition Width="36" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="1" Text="TITLE" />
+            <TextBlock Grid.Column="2" Text="STYLE" />
+            <TextBlock Grid.Column="3" Text="BPM" />
+            <TextBlock Grid.Column="4" Text="TIME" />
+        </Grid>
+
+        <ListView x:Name="List" Grid.Row="3" Style="{StaticResource SongList}" ItemsSource="{Binding View}" SelectionMode="Extended"
+                  MouseDoubleClick="OnDoubleClick" KeyDown="OnListKey">
+            <ListView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Play" Command="{Binding PlayCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Separator />
+                    <MenuItem Header="Keep" Command="{Binding KeepCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Star" Command="{Binding StarCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Mark as trash" Command="{Binding TrashCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Separator />
+                    <MenuItem Header="Edit details…" Click="OnEdit" />
+                    <MenuItem Header="Save prompt to Vault" Command="{Binding SaveToVaultCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Show in Explorer" Command="{Binding ShowInExplorerCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Copy file" InputGestureText="Ctrl+C" Command="{Binding CopyFilesCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Separator />
+                    <MenuItem Header="Move to Recycle Bin" InputGestureText="Del" Command="{Binding RecycleCommand}"
+                              CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                </ContextMenu>
+            </ListView.ContextMenu>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Height="46">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="58" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="56" />
+                            <ColumnDefinition Width="64" />
+                            <ColumnDefinition Width="36" />
+                        </Grid.ColumnDefinitions>
+                        <Grid Width="44" Height="44" HorizontalAlignment="Left">
+                            <Border CornerRadius="7" Background="{StaticResource ArtPlaceholder}">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE8D6;" FontSize="14" Foreground="#80FFFFFF" />
+                            </Border>
+                            <Border CornerRadius="7">
+                                <Border.Background>
+                                    <ImageBrush Stretch="UniformToFill" ImageSource="{Binding ArtPath, Converter={StaticResource Img}, ConverterParameter=88}" />
+                                </Border.Background>
+                            </Border>
+                            <Border CornerRadius="7" Background="#99000000" Visibility="{Binding IsPlaying, Converter={StaticResource Visible}}">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE995;" Foreground="White" />
+                            </Border>
+                        </Grid>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding Artist}" Style="{StaticResource Muted}" Margin="0,2,0,0"
+                                       Visibility="{Binding Artist, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding Genre}" Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                   Margin="0,0,12,0" ToolTip="{Binding StyleTags}" />
+                        <TextBlock Grid.Column="3" Text="{Binding BpmText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="4" Text="{Binding DurationText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="5" Style="{StaticResource Glyph}" FontSize="13"
+                                   Text="{Binding Tag, Converter={StaticResource Tag}, ConverterParameter=glyph}"
+                                   Foreground="{Binding Tag, Converter={StaticResource Tag}}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Empty state -->
+        <Border Grid.Row="3" Style="{StaticResource Card}" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="36,30"
+                Visibility="{Binding Tracks.Count, Converter={StaticResource Visible}, ConverterParameter=not}">
+            <StackPanel HorizontalAlignment="Center" MaxWidth="380">
+                <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource AccentGradient}" HorizontalAlignment="Center">
+                    <TextBlock Style="{StaticResource Glyph}" Text="&#xE8D6;" FontSize="28" Foreground="White" />
+                </Border>
+                <TextBlock Margin="0,18,0,6" Text="Your library is empty" Style="{StaticResource SectionTitle}" HorizontalAlignment="Center" />
+                <TextBlock TextAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource SubtleBrush}"
+                           Text="{Binding Folder, StringFormat='Songs you download land in {0}. Sync from Suno, or point Onus at a folder you already have.'}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+                    <Button Style="{StaticResource AccentButton}" Content="Go to Suno" Margin="0,0,10,0"
+                            Command="{Binding DataContext.GoToCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Suno" />
+                    <Button Style="{StaticResource SubtleButton}" Content="Choose folder"
+                            Command="{Binding DataContext.GoToCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="Settings" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
