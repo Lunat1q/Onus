@@ -1,7 +1,7 @@
 # Onus
 
 A native Windows app for your Suno library: browse it, download it, listen to it, and look inside the sound while it
-plays. It's a rework of [SunoSync](https://github.com/sunsetsacoustic/SunoSyncV2) with a player that works.
+plays. It's a rework of [SunoSync](https://github.com/sunsetsacoustic/SunoSync) with a player that works.
 
 ![Onus playing a song with the live analysis panel open](docs/screenshots/analyzer.png)
 
