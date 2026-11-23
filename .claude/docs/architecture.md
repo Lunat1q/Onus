@@ -24,7 +24,8 @@ src/Onus/
     AnalyticsRecorder.cs # records an uninterrupted listen of a stream-only clip → .wav.part → AAC .m4a in the cache
     SunoClient.cs        # studio API; bearer on every call; 401 → refresh once; workspace 404 → playlist
     Downloader.cs        # resolve MP3/WAV, stream to .part, verify, move, tag, sidecars (.txt, .jpg, cover.jpg)
-    TagIO.cs             # TagLib read/write; SUNO_UUID TXXX frame = the dedupe key
+    TagIO.cs             # TagLib read/write; SUNO_UUID TXXX frame = the dedupe key; tag copy for Save as
+    Exporter.cs          # Library "Save as": copy or convert to MP3/WAV/M4A via Media Foundation (NAudio), tags carried
     LibraryIndex.cs      # folder scan, cached by path+size+mtime
     Stores.cs            # TagStore (keep/star/trash), PromptStore, SunoSyncImport
   ViewModels/            # Main (nav/toast), Player, Library, Cloud(+CloudClip), PageViewModels (Dashboard, Vault, Settings),

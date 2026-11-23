@@ -32,6 +32,12 @@ public partial class LibraryView : UserControl
         e.Handled = true;
     }
 
+    private async void OnSaveAs(object sender, RoutedEventArgs e)
+    {
+        if (Vm is { } vm && sender is MenuItem { Tag: string ext })
+            await vm.SaveAsAsync(List.SelectedItems.OfType<Track>().ToList(), ext);
+    }
+
     private void OnEdit(object sender, RoutedEventArgs e)
     {
         if (List.SelectedItem is not Track t || Vm is not { } vm) return;

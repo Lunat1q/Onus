@@ -32,15 +32,15 @@ public class TagIOTests : IDisposable
         return path;
     }
 
-    /// <summary>A one-second 8 kHz mono PCM WAV.</summary>
-    private string Wav()
+    /// <summary>A one-second silent 16-bit PCM WAV (8 kHz mono by default).</summary>
+    private string Wav(int rate = 8000, short channels = 1, string name = "a.wav")
     {
-        var path = Path.Combine(_dir, "a.wav");
+        var path = Path.Combine(_dir, name);
         using var w = new BinaryWriter(File.Create(path));
-        const int rate = 8000, samples = 8000;
-        w.Write("RIFF"u8); w.Write(36 + samples * 2); w.Write("WAVE"u8);
-        w.Write("fmt "u8); w.Write(16); w.Write((short)1); w.Write((short)1); w.Write(rate); w.Write(rate * 2); w.Write((short)2); w.Write((short)16);
-        w.Write("data"u8); w.Write(samples * 2); w.Write(new byte[samples * 2]);
+        int block = channels * 2, bytes = rate * block;
+        w.Write("RIFF"u8); w.Write(36 + bytes); w.Write("WAVE"u8);
+        w.Write("fmt "u8); w.Write(16); w.Write((short)1); w.Write(channels); w.Write(rate); w.Write(rate * block); w.Write((short)block); w.Write((short)16);
+        w.Write("data"u8); w.Write(bytes); w.Write(new byte[bytes]);
         return path;
     }
 
@@ -88,5 +88,48 @@ public class TagIOTests : IDisposable
         var renamed = Path.Combine(Path.GetDirectoryName(path)!, "my_cool_song.mp3");
         File.Move(path, renamed);
         TagIO.Read(renamed).Title.Should().Be("my cool song");
+    }
+
+    /// <summary>Save as: converted copies keep title, artist, lyrics and prompt, but not the SUNO_UUID (a copy in the
+    /// library folder must not count as the download). 8 kHz mono goes through the resampler for MP3/AAC.</summary>
+    [Theory]
+    [InlineData(48000, 2, ".mp3")]
+    [InlineData(48000, 2, ".m4a")]
+    [InlineData(8000, 1, ".mp3")]
+    [InlineData(8000, 1, ".m4a")]
+    public void Save_as_converts_and_carries_tags(int rate, short channels, string ext)
+    {
+        var src = Wav(rate, channels);
+        TagIO.WriteSuno(src, Clip, art: null, full: true);
+        var target = Path.Combine(_dir, "out", "Neon Rain" + ext);
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+
+        Exporter.Export(TagIO.Read(src), target);
+
+        var t = TagIO.Read(target);
+        t.Title.Should().Be("Neon Rain");
+        t.Artist.Should().Be("grim");
+        t.Lyrics.Should().Be(Clip.Lyrics);
+        t.Prompt.Should().Be(Clip.Prompt);
+        t.SunoId.Should().BeNull();
+        t.Duration.Should().BeApproximately(1, 0.2);
+        Directory.GetFiles(Path.GetDirectoryName(target)!).Should().Equal(target); // temp file gone
+    }
+
+    [Fact]
+    public void Save_as_to_wav_decodes_and_same_format_copies()
+    {
+        var src = Wav(48000, 2);
+        TagIO.WriteSuno(src, Clip, art: null, full: true);
+        var mp3 = Path.Combine(_dir, "b.mp3");
+        Exporter.Export(TagIO.Read(src), mp3);
+
+        var wav = Path.Combine(_dir, "c.wav");
+        Exporter.Export(TagIO.Read(mp3), wav);
+        TagIO.Read(wav).Title.Should().Be("Neon Rain");
+
+        var copy = Path.Combine(_dir, "d.wav");
+        Exporter.Export(TagIO.Read(src), copy);
+        File.ReadAllBytes(copy).Should().Equal(File.ReadAllBytes(src));
     }
 }

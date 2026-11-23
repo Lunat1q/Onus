@@ -123,6 +123,32 @@ public static class TagIO
         f.Save();
     }
 
+    /// <summary>Save as: carry the standard tags (title, artist, genre, year, comment, lyrics, cover…) and the prompt
+    /// to a converted copy. The SUNO_UUID is left out on purpose: a copy saved into the library folder would
+    /// otherwise count as the download. No embedded cover → the sidecar/cached art, if any.</summary>
+    public static void CopyTags(Track from, string to)
+    {
+        using var src = TagLib.File.Create(from.Path, ReadStyle.Average);
+        using var dst = TagLib.File.Create(to);
+        var t = Writable(dst);
+        var s = src.Tag; // ponytail: Tag.CopyTo throws on M4A targets and drops lyrics, so the fields Onus shows go by hand
+        t.Title = s.Title;
+        t.Performers = s.Performers;
+        t.AlbumArtists = s.AlbumArtists;
+        t.Album = s.Album;
+        t.Genres = s.Genres;
+        t.Year = s.Year;
+        t.Track = s.Track;
+        t.BeatsPerMinute = s.BeatsPerMinute;
+        t.Comment = s.Comment;
+        t.Lyrics = string.IsNullOrWhiteSpace(s.Lyrics) ? from.Lyrics : s.Lyrics; // sidecar .txt lyrics travel too
+        t.Pictures = s.Pictures;
+        if (from.Prompt.Length > 0) SetCustom(t, "prompt", from.Prompt);
+        if (t.Pictures.Length == 0 && from.ArtPath is { } art && File.Exists(art))
+            t.Pictures = [new Picture(art) { Type = PictureType.FrontCover, Description = "Cover" }];
+        dst.Save();
+    }
+
     /// <summary>ID3v2 for MP3/WAV, the iTunes atom for M4A (an MP4 file can't hold ID3).</summary>
     private static TagLib.Tag Writable(TagLib.File f) =>
         (TagLib.Tag?)(f.GetTag(TagTypes.Id3v2, true) as Tag) ?? f.GetTag(TagTypes.Apple, true) ?? f.Tag;

@@ -94,6 +94,11 @@
                               CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                     <MenuItem Header="Show in Explorer" Command="{Binding ShowInExplorerCommand}"
                               CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <MenuItem Header="Save as">
+                        <MenuItem Header="MP3…" Tag=".mp3" Click="OnSaveAs" />
+                        <MenuItem Header="WAV…" Tag=".wav" Click="OnSaveAs" />
+                        <MenuItem Header="M4A (AAC)…" Tag=".m4a" Click="OnSaveAs" />
+                    </MenuItem>
                     <MenuItem Header="Copy file" InputGestureText="Ctrl+C" Command="{Binding CopyFilesCommand}"
                               CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                     <Separator />

@@ -26,6 +26,8 @@ public sealed partial class Settings : ObservableObject
     [ObservableProperty] private string _manualToken = "";
     [ObservableProperty] private ClipFilter _filter = new();
     [ObservableProperty] private bool _importOffered;
+    /// <summary>Library "Save as": last folder picked (empty = Music).</summary>
+    [ObservableProperty] private string _exportFolder = "";
 
     /// <summary>Smart Resume stops a scan after this many pages in a row with nothing new,
     /// scaled to library size (SunoSync's thresholds).</summary>

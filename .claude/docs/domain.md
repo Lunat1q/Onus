@@ -34,6 +34,11 @@
   *Analytics cache* and plays that file through the Windows player (no WebView). The Library lists captures too
   (rescanned when one is saved) and plays them like any file; Sync and *On disk* ignore the folder. A real download
   still wins: it shows *On disk* and hides the capture from the Library.
+- **Save as** (Library right-click → Save as → MP3 / WAV / M4A): one song → file dialog named after its title; several
+  → folder picker, `{title}.{ext}` with " v2" on clashes. Last folder remembered (`ExportFolder`, default Music).
+  Same format = byte copy (all tags, `SUNO_UUID` too); else Media Foundation decode → MP3 320 kbps / AAC 256 kbps / 16-bit WAV (resampled to
+  44.1/48 kHz 16-bit when the encoders need it). Converted: tags, prompt, cover and sidecar lyrics carry over, `SUNO_UUID` does not
+  (a converted copy saved in the library folder must not count as the download).
 - **Marks**: keep / star / trash, keyed by Suno id (path for non-Suno files), same `tags.json` shape as SunoSync.
   Trash-marked songs are hidden from "All" and from Home stats.
 

@@ -128,6 +128,58 @@ public sealed partial class LibraryViewModel : ObservableObject
         Toast?.Invoke(files.Count == 1 ? "File copied — paste it anywhere" : $"{files.Count} files copied");
     }
 
+    /// <summary>Save as {ext}: one song → a file dialog named after the title; several → a folder, names from titles.
+    /// The folder is remembered.</summary>
+    public async Task SaveAsAsync(IReadOnlyList<Track> tracks, string ext)
+    {
+        if (tracks.Count == 0) return;
+        var folder = Directory.Exists(_settings.ExportFolder) ? _settings.ExportFolder : Environment.GetFolderPath(Environment.SpecialFolder.MyMusic);
+        List<(Track Track, string Target)> jobs;
+        if (tracks.Count == 1)
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                InitialDirectory = folder,
+                FileName = FileNames.Sanitize(tracks[0].Title),
+                Filter = "MP3|*.mp3|WAV|*.wav|M4A (AAC)|*.m4a",
+                FilterIndex = Array.IndexOf(Exporter.Formats, ext) + 1,
+                AddExtension = true,
+            };
+            if (dialog.ShowDialog() != true) return;
+            var target = Exporter.Formats.Contains(Path.GetExtension(dialog.FileName).ToLowerInvariant())
+                ? dialog.FileName : dialog.FileName + Exporter.Formats[dialog.FilterIndex - 1];
+            jobs = [(tracks[0], target)];
+        }
+        else
+        {
+            var dialog = new Microsoft.Win32.OpenFolderDialog { InitialDirectory = folder, Title = $"Save {tracks.Count} songs as {ext[1..].ToUpperInvariant()}" };
+            if (dialog.ShowDialog() != true) return;
+            jobs = [];
+            foreach (var t in tracks) // one at a time, so two songs with the same title get "v2" instead of colliding
+            {
+                var target = FileNames.Unique(Path.Combine(dialog.FolderName, FileNames.Sanitize(t.Title) + ext),
+                    p => File.Exists(p) || jobs.Exists(j => string.Equals(j.Target, p, StringComparison.OrdinalIgnoreCase)));
+                jobs.Add((t, target));
+            }
+        }
+        _settings.ExportFolder = Path.GetDirectoryName(jobs[0].Target) ?? folder;
+
+        Toast?.Invoke(jobs.Count == 1 ? $"Saving \"{jobs[0].Track.Title}\"…" : $"Saving {jobs.Count} songs…");
+        var failed = 0;
+        foreach (var (t, target) in jobs)
+        {
+            try { await Task.Run(() => Exporter.Export(t, target)); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException
+                                       or System.Runtime.InteropServices.COMException or TagLib.CorruptFileException or TagLib.UnsupportedFormatException)
+            {
+                failed++;
+                Log.Warn($"Save as: {Path.GetFileName(t.Path)} → {Path.GetFileName(target)} failed: {e.Message}");
+            }
+        }
+        Toast?.Invoke(failed == 0 ? (jobs.Count == 1 ? $"Saved {Path.GetFileName(jobs[0].Target)}" : $"Saved {jobs.Count} songs")
+                                  : $"{failed} of {jobs.Count} couldn't be saved (see log)");
+    }
+
     [RelayCommand]
     private void SaveToVault(Track? t)
     {
