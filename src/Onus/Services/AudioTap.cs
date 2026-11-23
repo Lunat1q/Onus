@@ -31,6 +31,7 @@ public sealed class AudioTap : IDisposable
         public long Written; // frames ever written; ring index = Written % Ring
         public long LastSound;
         public float Gain = 1;          // undoes the player volume: analysis and captures describe the song itself
+        public int Channels = 2;        // capture layout; only front L/R are kept
         public float[] Scaled = [];
     }
 
@@ -53,15 +54,31 @@ public sealed class AudioTap : IDisposable
         }
     }
 
+    /// <summary>Channels of the default speaker layout (2 when unknown). Asking process loopback for stereo on a
+    /// 5.1/7.1 device makes Windows downmix with headroom: a stereo song arrives ~13.5 dB low on 7.1 (measured).
+    /// So capture in the device's own layout and keep front L/R (<see cref="FrontPair"/>).</summary>
+    // ponytail: layout read once at start; switching speakers mid-session needs the analyzer reopened.
+    private static int DeviceChannels()
+    {
+        try
+        {
+            using var dev = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            using var client = dev.CreateAudioClient();
+            return Math.Max(2, client.MixFormat.Channels);
+        }
+        catch (Exception e) when (e is COMException or InvalidOperationException) { return 2; }
+    }
+
     private async Task AddAsync(uint pid)
     {
+        var channels = DeviceChannels();
         // Activation is async COM; run it off the STA so its completion callback isn't marshalled to a busy UI thread.
         var rec = await Task.Run(() => new WasapiRecorderBuilder()
             .WithProcessLoopback(pid, ProcessLoopbackMode.IncludeTargetProcessTree)
-            .WithFormat(WaveFormat.CreateIeeeFloatWaveFormat(Rate, 2))
+            .WithFormat(channels == 2 ? WaveFormat.CreateIeeeFloatWaveFormat(Rate, 2) : new WaveFormatExtensible(Rate, 32, channels))
             .WithBufferLength(40)
             .BuildAsync());
-        var src = new Source();
+        var src = new Source { Channels = channels };
         rec.DataAvailable += (buffer, flags, _, _) => OnData(src, MemoryMarshal.Cast<byte, float>(buffer), flags.HasFlag(AudioClientBufferFlags.Silent));
         rec.RecordingStopped += (_, e) => { if (e.Exception is { } ex) Log.Warn($"Audio tap stopped: {ex.Message}"); };
         _sources.Add((rec, src));
@@ -82,9 +99,10 @@ public sealed class AudioTap : IDisposable
     {
         lock (_gate)
         {
-            if (s.Scaled.Length < raw.Length) s.Scaled = new float[raw.Length];
-            for (var i = 0; i < raw.Length; i++) s.Scaled[i] = raw[i] * s.Gain;
-            ReadOnlySpan<float> samples = s.Scaled.AsSpan(0, raw.Length);
+            var n = raw.Length / s.Channels * 2;
+            if (s.Scaled.Length < n) s.Scaled = new float[n];
+            FrontPair(raw, s.Channels, s.Gain, s.Scaled);
+            ReadOnlySpan<float> samples = s.Scaled.AsSpan(0, n);
             float peak = 0;
             var clips = 0;
             for (var i = 0; i + 1 < samples.Length; i += 2)
@@ -106,6 +124,17 @@ public sealed class AudioTap : IDisposable
             _clips += clips;
             _maxPeak = Math.Max(_maxPeak, peak);
             _loudness.Process(samples);
+        }
+    }
+
+    /// <summary>Interleaved <paramref name="channels"/>-channel frames → interleaved front L/R × <paramref name="gain"/>.</summary>
+    // ponytail: centre / surround dropped; Suno and local songs are stereo. Fold them in if multichannel sources appear.
+    internal static void FrontPair(ReadOnlySpan<float> raw, int channels, float gain, Span<float> stereo)
+    {
+        for (int f = 0, o = 0; f + channels <= raw.Length; f += channels, o += 2)
+        {
+            stereo[o] = raw[f] * gain;
+            stereo[o + 1] = raw[f + 1] * gain;
         }
     }
 

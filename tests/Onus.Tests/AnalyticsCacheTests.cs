@@ -117,3 +117,16 @@ public class WebPlayerMessageTests
         Onus.Services.SunoWebPlayer.Parse("""{"t":"time","vol":"x"}""")!.Volume.Should().BeNull();
     }
 }
+
+public class AudioTapTests
+{
+    [Fact]
+    public void Surround_capture_keeps_front_pair_at_full_level()
+    {
+        // Two 7.1 frames: FL, FR, C, LFE, BL, BR, SL, SR. Windows' own 8→2 downmix would scale FL by ~0.21.
+        float[] raw = [0.5f, -0.25f, 9, 9, 9, 9, 9, 9, 0.1f, 0.2f, 9, 9, 9, 9, 9, 9];
+        var stereo = new float[4];
+        Onus.Services.AudioTap.FrontPair(raw, 8, 2f, stereo);
+        stereo.Should().Equal(1f, -0.5f, 0.2f, 0.4f);
+    }
+}

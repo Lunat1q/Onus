@@ -79,6 +79,7 @@
 | Crash dialogs when opening the analyzer | a Height animation laid the scopes out at a few px → negative `Rect` | panel slides in (TranslateTransform); `Scope` skips drawing below 16×14 |
 | Analyzer flat while a stream-only song plays | process loopback on Onus doesn't reach grandchildren; Chromium's audio service is one | second loopback on `CoreWebView2.BrowserProcessId` (ADR 0005) |
 | Stream levels ~20 dB low (peak −22 dBFS) | Suno's page sets `<audio>.volume` on its own curve (0.8 → 0.46) | page reports its real volume; tap divides it out |
+| Captures still ~13.5 dB low after the volume fix (−27 LUFS, peaks −15 dBFS); mood Energy never above 50 % | process loopback asked for stereo on a 7.1 device: Windows' 8→2 downmix scales front L/R by ~0.21 | capture in the device's channel count, keep front L/R (`AudioTap.FrontPair`, test); measured equal to the speaker feed |
 | Analytics capture never saved: "could not create a sink writer" | Media Foundation picks the container from the extension; temp name was `.m4a.part` | encode to `{id}.encoding.m4a`, then move |
 | REC died when the analyzer was closed and reopened | capture lived and died with the panel's visibility | capture moved to the app-lifetime `AnalyticsHub`; the panel only draws |
 | No REC after clicking another song mid-song | old song page kept reporting its position (0:45) until navigation; recorder only tried to start on the tick the id changed | recorder starts whenever the song is at 0:00 and not yet cached (test) |
