@@ -21,13 +21,18 @@ public sealed class SunoWebPlayer(SunoAuth auth)
           if (window.top !== window || !window.chrome?.webview) return;
           const post = m => window.chrome.webview.postMessage(m);
           const main = () => [...document.querySelectorAll('audio')].find(a => a.currentSrc && !/\/sil-\d+\./.test(a.currentSrc));
-          let vol = 1, started = false, done = false, last = 0, ours = false;
+          let vol = null, started = false, done = false, last = 0, ours = false;
           // Suno puts its own curve on the volume (0.8 → 0.46). Only Onus may set it, so the analyzer knows the
-          // exact gain to undo the moment it changes.
+          // exact gain to undo. Set inside play() itself, before any audio exists: a fresh element starts at 1, and
+          // the analyzer's gain (up to ×100 000) on those first loud ms clipped a burst into every capture. Until
+          // Onus has said its volume, play at the floor: wrong can only mean too quiet, never too loud.
           const volume$ = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
           Object.defineProperty(HTMLMediaElement.prototype, 'volume', { configurable: true, enumerable: true,
             get() { return volume$.get.call(this); }, set(v) { if (ours) volume$.set.call(this, v); } });
-          const setVolume = a => { ours = true; try { a.volume = vol; } finally { ours = false; } };
+          const setVolume = a => { ours = true; try { a.volume = vol ?? 1e-5; } finally { ours = false; } };
+          const play$ = HTMLMediaElement.prototype.play;
+          HTMLMediaElement.prototype.play = function () { setVolume(this); return play$.call(this); };
+          post({ t: 'ready' }); // host answers with the volume before anything is pressed
           const report = a => post({ t: 'time', pos: a.currentTime, dur: a.duration || 0, playing: !a.paused });
           window.__onus = {
             // AbortError = a play() overtaken by a pause or a new load: harmless, the next event tells the truth
@@ -51,6 +56,7 @@ public sealed class SunoWebPlayer(SunoAuth auth)
           let ticks = 0;
           const press = setInterval(() => {
             if (started || done) { clearInterval(press); return; }
+            if (vol === null && ++ticks <= 80) return; // volume not here yet (play() would use the floor anyway)
             const button = document.querySelector('button[aria-label="Play"]');
             const a = main();
             if (a && a.paused && a.readyState >= 1 && ticks % 4 === 2) {
@@ -131,7 +137,6 @@ public sealed class SunoWebPlayer(SunoAuth auth)
         {
             if (!e.IsSuccess && web.Source.StartsWith("https://suno.com/song/", StringComparison.Ordinal))
                 Failed?.Invoke($"suno.com didn't load ({e.WebErrorStatus})");
-            else Run($"volume({_pendingVolume.ToString(System.Globalization.CultureInfo.InvariantCulture)})");
         };
     }
 
@@ -143,6 +148,7 @@ public sealed class SunoWebPlayer(SunoAuth auth)
             case "time":
                 Progress?.Invoke(m.Position, m.Duration, m.Playing);
                 break;
+            case "ready": SetVolume(_pendingVolume); break;
             case "ended": Ended?.Invoke(); break;
             case "log": Log.Info($"Suno web player: {m.Text}"); break;
             case "error":

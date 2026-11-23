@@ -51,6 +51,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         if (duration > 0) _duration = duration;
         if (playing)
         {
+            if (OutOfStep(_buf)) { Abort("level glitch (volume and gain out of step)"); return; }
             var pcm = new short[_buf.Count];
             for (var i = 0; i < pcm.Length; i++) pcm[i] = (short)(Math.Clamp(_buf[i], -1f, 1f) * short.MaxValue);
             _wav.WriteSamples(pcm, 0, pcm.Length);
@@ -129,6 +130,9 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         TryDelete(path);
         Log.Info($"Analytics cache: capture dropped ({why}); play the song through from the start to cache it");
     }
+
+    /// <summary>A song itself never reaches +6 dBFS: that is the player volume undone with the wrong gain.</summary>
+    internal static bool OutOfStep(List<float> samples) => samples.Exists(x => Math.Abs(x) > 2);
 
     private static string Encoding(string target) => Path.ChangeExtension(target, ".encoding.m4a");
 

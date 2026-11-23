@@ -51,9 +51,11 @@ public class AnalyticsCacheTests
         try
         {
             var old = Path.Combine(dir, Id + ".m4a");
-            File.WriteAllText(old, "quiet 1.0 capture");
+            File.WriteAllText(old, "capture with a burst at the start");
+            File.WriteAllText(Path.Combine(dir, ".level-v2"), "");
             AnalyticsCache.PurgeStale(root);
             File.Exists(old).Should().BeFalse();
+            Directory.GetFiles(dir).Select(Path.GetFileName).Should().Equal(AnalyticsCache.LevelMarker);
 
             File.WriteAllText(old, "good capture");
             AnalyticsCache.PurgeStale(root); // marker present: new captures stay
@@ -124,6 +126,16 @@ public class AnalyticsRecorderTests
         }
     }
 
+}
+
+public class CaptureGuardTests
+{
+    [Fact]
+    public void Burst_from_a_wrong_gain_is_never_cached()
+    {
+        Onus.Services.AnalyticsRecorder.OutOfStep([0.5f, -0.99f, 1.1f]).Should().BeFalse(); // loud master, overshoot
+        Onus.Services.AnalyticsRecorder.OutOfStep([0.5f, -9f, 0.1f]).Should().BeTrue();     // full-volume ms × gain 9
+    }
 }
 
 public class WebPlayerMessageTests
