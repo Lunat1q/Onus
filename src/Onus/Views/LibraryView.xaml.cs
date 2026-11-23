@@ -18,6 +18,15 @@ public partial class LibraryView : UserControl
         if ((e.OriginalSource as FrameworkElement)?.DataContext is Track t) Vm?.PlayCommand.Execute(t);
     }
 
+    /// <summary>Keep the column header over the rows: the vertical scrollbar only takes width when the list
+    /// overflows, so the header's right inset follows it (row padding 10 + whatever the bar takes).</summary>
+    private void OnListScroll(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.ViewportWidthChange == 0 && e.ExtentHeightChange == 0) return;
+        var bar = e.OriginalSource is ScrollViewer sv ? Math.Max(0, List.ActualWidth - sv.ViewportWidth) : 0;
+        Header.Margin = new Thickness(10, 4, 10 + bar, 6);
+    }
+
     private void OnListKey(object sender, KeyEventArgs e)
     {
         if (Vm is not { } vm) return;

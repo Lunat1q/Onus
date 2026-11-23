@@ -62,7 +62,7 @@
         </DockPanel>
 
         <!-- Column header -->
-        <Grid Grid.Row="2" Margin="10,4,26,6" TextElement.Foreground="{StaticResource FaintBrush}" TextElement.FontSize="11.5">
+        <Grid x:Name="Header" Grid.Row="2" Margin="10,4,10,6" TextElement.Foreground="{StaticResource FaintBrush}" TextElement.FontSize="11.5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="58" />
                 <ColumnDefinition Width="*" />
@@ -82,7 +82,7 @@
         </Grid>
 
         <ListView x:Name="List" Grid.Row="3" Style="{StaticResource SongList}" ItemsSource="{Binding View}" SelectionMode="Extended"
-                  MouseDoubleClick="OnDoubleClick" KeyDown="OnListKey">
+                  MouseDoubleClick="OnDoubleClick" KeyDown="OnListKey" ScrollViewer.ScrollChanged="OnListScroll">
             <ListView.ContextMenu>
                 <ContextMenu>
                     <MenuItem Header="Play" Command="{Binding PlayCommand}"
