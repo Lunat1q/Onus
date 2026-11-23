@@ -34,7 +34,7 @@ public sealed class AudioTap : IDisposable
         public float[] Scaled = [];
     }
 
-    private AudioTap() { }
+    internal AudioTap() { } // no sources: silent (tests)
 
     /// <summary>Starts capture of Onus and, when given, the WebView2 browser tree. Throws when Windows refuses.</summary>
     public static async Task<AudioTap> StartAsync(uint? webBrowserProcessId)

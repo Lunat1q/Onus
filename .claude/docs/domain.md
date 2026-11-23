@@ -81,5 +81,6 @@
 | Stream levels ~20 dB low (peak −22 dBFS) | Suno's page sets `<audio>.volume` on its own curve (0.8 → 0.46) | page reports its real volume; tap divides it out |
 | Analytics capture never saved: "could not create a sink writer" | Media Foundation picks the container from the extension; temp name was `.m4a.part` | encode to `{id}.encoding.m4a`, then move |
 | REC died when the analyzer was closed and reopened | capture lived and died with the panel's visibility | capture moved to the app-lifetime `AnalyticsHub`; the panel only draws |
+| No REC after clicking another song mid-song | old song page kept reporting its position (0:45) until navigation; recorder only tried to start on the tick the id changed | recorder starts whenever the song is at 0:00 and not yet cached (test) |
 | `CallDevToolsProtocolMethodAsync` E_INVALIDARG | called before the hidden page committed its first navigation | wait for first `NavigationCompleted` |
 | Sync "never finishes"; rows just say "Failed" | every MP3 url was Suno's `/api/forbidden` placeholder (403); each was retried 3× with no reason shown | 4xx fails at once (test); row shows `Failed · 403`, tooltip + log name the refused host/path (query left out) |

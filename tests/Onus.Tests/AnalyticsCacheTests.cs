@@ -64,6 +64,38 @@ public class AnalyticsCacheTests
     }
 }
 
+public class AnalyticsRecorderTests
+{
+    private const string A = "0f8fad5b-d9cb-469f-a165-70867728950e", B = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+
+    [Fact]
+    public void Starts_on_a_clicked_song_even_while_the_old_page_still_reports_its_position()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "onus-rec-" + Guid.NewGuid().ToString("N"));
+        using var rec = new Onus.Services.AnalyticsRecorder(new Onus.Services.AudioTap(), () => root);
+        try
+        {
+            rec.Tick(A, true, true, 0, 180, 0);
+            rec.IsRecording.Should().BeTrue();
+
+            rec.Tick(B, true, true, 45, 180, 0.1); // mouse switch mid-song: song A's page reports 0:45 once more
+            rec.IsRecording.Should().BeFalse();
+            rec.Tick(B, true, true, 0, 200, 0.2);  // song B's page loaded
+            rec.IsRecording.Should().BeTrue();
+
+            rec.Tick(B, true, true, 90, 200, 0.3); // seek drops the capture …
+            rec.IsRecording.Should().BeFalse();
+            rec.Tick(B, true, true, 0, 200, 0.4);  // … back at 0:00 it starts over
+            rec.IsRecording.Should().BeTrue();
+        }
+        finally
+        {
+            rec.Dispose();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+}
+
 public class WebPlayerMessageTests
 {
     [Fact]

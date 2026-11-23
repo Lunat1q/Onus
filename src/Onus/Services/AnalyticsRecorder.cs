@@ -19,6 +19,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
     private string _wavPath = "";
     private long _cursor = -1, _frames;
     private double _lastPos, _lastTime, _duration;
+    private bool _settled;        // this song is cached (or not cacheable): stop trying to start a capture
 
     /// <summary>Clip id + saved path, raised on the UI thread's synchronization context.</summary>
     public event Action<string, string>? Saved;
@@ -35,8 +36,11 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         {
             Finish();
             _id = id;
-            if (id is not null && position < 1) Begin(id, now);
+            _settled = false;
         }
+        // Not only on the switch itself: the old song's page keeps reporting its position until the new one loads,
+        // and a dropped capture (seek, Previous) starts over once the song is back at 0:00.
+        if (_wav is null && !_settled && id is not null && position < 1) Begin(id, now);
         _buf.Clear();
         var intact = tap.ReadNew(AudioTap.Web, ref _cursor, _buf);
         if (_wav is null) { State = null; return; }
@@ -62,7 +66,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
     private void Begin(string id, double now)
     {
         var folder = downloadFolder();
-        if (AnalyticsCache.PathFor(folder, id) is not { } target || File.Exists(target)) return;
+        if (AnalyticsCache.PathFor(folder, id) is not { } target || File.Exists(target)) { _settled = true; return; }
         var dir = Directory.CreateDirectory(AnalyticsCache.Folder(folder));
         foreach (var stale in dir.EnumerateFiles("*.wav.part")) TryDelete(stale.FullName); // left by a crash or kill
         _target = target;
@@ -81,6 +85,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         if (_wav is null || _target is null) return;
         if (!AnalyticsCache.IsComplete((double)_frames / AudioTap.Rate, _duration)) { Abort("song left early"); return; }
         var (wavPath, target, id) = (_wavPath, _target, _id!);
+        _settled = true; // encoding runs on; don't start a second capture over the same .wav.part
         _wav.Dispose();
         _wav = null;
         _target = null;
