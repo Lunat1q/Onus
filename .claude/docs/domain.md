@@ -39,6 +39,13 @@
   Same format = byte copy (all tags, `SUNO_UUID` too); else Media Foundation decode → MP3 320 kbps / AAC 256 kbps / 16-bit WAV (resampled to
   44.1/48 kHz 16-bit when the encoders need it). Converted: tags, prompt, cover and sidecar lyrics carry over, `SUNO_UUID` does not
   (a converted copy saved in the library folder must not count as the download).
+- **Library mood / key**: after each rescan, every song without a current `SongProfile` is decoded and run through
+  the analyzer's song-level math, one at a time on a lowest-priority thread (~1–2 s per song; status after the song
+  count). Mood needs 15 s of chords (else blank); key is the whole song's mean chroma (the live panel uses a rolling
+  8 s, so they can differ). Tooltip: major/minor share, energy, key confidence, top chords, changes/min, LUFS. Stored in
+  `library-cache.json` with the track, so it's redone only when the file changes (tag edits keep it); unreadable files
+  get an empty profile so they aren't retried. Bump `SongProfile.CurrentVersion` when the math changes. Search matches
+  mood and key; sort by Energy.
 - **Marks**: keep / star / trash, keyed by Suno id (path for non-Suno files), same `tags.json` shape as SunoSync.
   Trash-marked songs are hidden from "All" and from Home stats.
 

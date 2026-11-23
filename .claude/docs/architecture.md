@@ -15,6 +15,7 @@ src/Onus/
     AudioAnalysis.cs     # FFT, levels, log bands, pitch (HPS), harmonics, chroma, key, centroid, L/R correlation
     Loudness.cs          # BS.1770 LoudnessMeter: K-weighting, momentary / short-term / gated integrated LUFS
     Harmony.cs           # triad per chroma frame, per-song major/minor chord time, top chords, changes/min, energy → mood
+    SongProfile.cs       # SongProfiler: the analyzer's song-level math over a whole file → SongProfile (mood, key, energy, LUFS)
     AnalyticsCache.cs    # {download folder}/analytics/{clip id}.m4a paths, completeness + seek rules
     Jwt.cs, RateLimiter.cs, JsonStore.cs (temp file + move), Log.cs, AppPaths.cs, Settings.cs, Models.cs
   Services/
@@ -25,6 +26,7 @@ src/Onus/
     SunoClient.cs        # studio API; bearer on every call; 401 → refresh once; workspace 404 → playlist
     Downloader.cs        # resolve MP3/WAV, stream to .part, verify, move, tag, sidecars (.txt, .jpg, cover.jpg)
     TagIO.cs             # TagLib read/write; SUNO_UUID TXXX frame = the dedupe key; tag copy for Save as
+    SongAnalyzer.cs      # decode a library file (Media Foundation → 48 kHz float stereo) through SongProfiler
     Exporter.cs          # Library "Save as": copy or convert to MP3/WAV/M4A via Media Foundation (NAudio), tags carried
     LibraryIndex.cs      # folder scan, cached by path+size+mtime
     Stores.cs            # TagStore (keep/star/trash), PromptStore, SunoSyncImport

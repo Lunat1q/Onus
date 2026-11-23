@@ -41,8 +41,7 @@ public sealed class LibraryIndex
         }
         var listed = AnalyticsCache.ForLibrary(folder, next.Values);
         _cache = listed.ToDictionary(t => t.Path, StringComparer.OrdinalIgnoreCase);
-        try { JsonStore.Save(AppPaths.LibraryCache, listed); }
-        catch (IOException e) { Log.Warn($"Library cache not saved: {e.Message}"); }
+        Save();
         return listed.OrderByDescending(t => t.Modified).ToList();
     }, ct);
 
@@ -50,4 +49,11 @@ public sealed class LibraryIndex
     public Track Refresh(string path) => _cache[path] = TagIO.Read(path);
 
     public void Forget(string path) => _cache.Remove(path);
+
+    /// <summary>Persist the cache (also after background analysis filled in profiles).</summary>
+    public void Save()
+    {
+        try { JsonStore.Save(AppPaths.LibraryCache, _cache.Values.ToList()); }
+        catch (IOException e) { Log.Warn($"Library cache not saved: {e.Message}"); }
+    }
 }

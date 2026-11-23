@@ -27,7 +27,9 @@
             </StackPanel>
             <StackPanel>
                 <TextBlock Text="Library" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}" Margin="0,2,0,0" />
+                <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0">
+                    <Run Text="{Binding Summary, Mode=OneWay}" /><Run Text="{Binding AnalyzeStatus, Mode=OneWay}" />
+                </TextBlock>
             </StackPanel>
         </DockPanel>
 
@@ -45,7 +47,7 @@
                 <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=150}" Padding="34,6,10,6" />
                 <TextBlock Style="{StaticResource Glyph}" Text="&#xE721;" FontSize="13" HorizontalAlignment="Left" Margin="12,0,0,0"
                            Foreground="{StaticResource FaintBrush}" IsHitTestVisible="False" />
-                <TextBlock Style="{StaticResource Hint}" Margin="34,0,0,0" Text="Search title, artist, style…" Tag="{Binding Text, ElementName=SearchBox}" />
+                <TextBlock Style="{StaticResource Hint}" Margin="34,0,0,0" Text="Search title, artist, style, mood, key…" Tag="{Binding Text, ElementName=SearchBox}" />
             </Grid>
             <StackPanel Orientation="Horizontal" Margin="16,8,0,0" VerticalAlignment="Center">
                 <RadioButton Style="{StaticResource ChipRadio}" Content="All" GroupName="tagf"
@@ -65,14 +67,18 @@
                 <ColumnDefinition Width="58" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="84" />
                 <ColumnDefinition Width="56" />
                 <ColumnDefinition Width="64" />
                 <ColumnDefinition Width="36" />
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Column="1" Text="TITLE" />
             <TextBlock Grid.Column="2" Text="STYLE" />
-            <TextBlock Grid.Column="3" Text="BPM" />
-            <TextBlock Grid.Column="4" Text="TIME" />
+            <TextBlock Grid.Column="3" Text="MOOD" />
+            <TextBlock Grid.Column="4" Text="KEY" />
+            <TextBlock Grid.Column="5" Text="BPM" />
+            <TextBlock Grid.Column="6" Text="TIME" />
         </Grid>
 
         <ListView x:Name="List" Grid.Row="3" Style="{StaticResource SongList}" ItemsSource="{Binding View}" SelectionMode="Extended"
@@ -113,6 +119,8 @@
                             <ColumnDefinition Width="58" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="84" />
                             <ColumnDefinition Width="56" />
                             <ColumnDefinition Width="64" />
                             <ColumnDefinition Width="36" />
@@ -147,9 +155,13 @@
                         </StackPanel>
                         <TextBlock Grid.Column="2" Text="{Binding Genre}" Style="{StaticResource Muted}" VerticalAlignment="Center"
                                    Margin="0,0,12,0" ToolTip="{Binding StyleTags}" />
-                        <TextBlock Grid.Column="3" Text="{Binding BpmText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="4" Text="{Binding DurationText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="5" Style="{StaticResource Glyph}" FontSize="13"
+                        <TextBlock Grid.Column="3" Text="{Binding MoodText}" Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                   Margin="0,0,12,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ProfileTip}" />
+                        <TextBlock Grid.Column="4" Text="{Binding KeyText}" Style="{StaticResource Muted}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding ProfileTip}" />
+                        <TextBlock Grid.Column="5" Text="{Binding BpmText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="6" Text="{Binding DurationText}" Style="{StaticResource Muted}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="7" Style="{StaticResource Glyph}" FontSize="13"
                                    Text="{Binding Tag, Converter={StaticResource Tag}, ConverterParameter=glyph}"
                                    Foreground="{Binding Tag, Converter={StaticResource Tag}}" />
                     </Grid>

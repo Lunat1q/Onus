@@ -14,14 +14,14 @@ namespace Onus.ViewModels;
 
 public sealed partial class LibraryViewModel : ObservableObject
 {
-    public static readonly string[] SortOptions = ["Newest", "Title", "Artist", "Duration", "BPM"];
+    public static readonly string[] SortOptions = ["Newest", "Title", "Artist", "Duration", "BPM", "Energy"];
 
     private readonly LibraryIndex _index;
     private readonly TagStore _tags;
     private readonly PromptStore _prompts;
     private readonly Settings _settings;
     private readonly PlayerViewModel _player;
-    private CancellationTokenSource? _scan;
+    private CancellationTokenSource? _scan, _analyze;
 
     public ObservableCollection<Track> Tracks { get; private set; } = [];
 
@@ -33,6 +33,7 @@ public sealed partial class LibraryViewModel : ObservableObject
     [ObservableProperty] private string? _tagFilter; // null = all, else keep/star/trash
     [ObservableProperty] private bool _isScanning;
     [ObservableProperty] private string _summary = "";
+    [ObservableProperty] private string _analyzeStatus = "";
 
     public event Action<string>? Toast;
     public event Action? Changed;
@@ -70,8 +71,51 @@ public sealed partial class LibraryViewModel : ObservableObject
             Load(await _index.ScanAsync(_settings.DownloadFolder, _scan.Token));
             Changed?.Invoke();
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { return; }
         finally { IsScanning = false; }
+        await AnalyzeMissingAsync();
+    }
+
+    /// <summary>Mood / key / energy for every song without a current profile, one at a time on a low-priority
+    /// thread; a rescan restarts it with the new list. Saved to the library cache every 20 songs and at the end.</summary>
+    private async Task AnalyzeMissingAsync()
+    {
+        _analyze?.Cancel();
+        var cts = _analyze = new CancellationTokenSource();
+        var todo = Tracks.Where(t => t.Profile?.Version != SongProfile.CurrentVersion).ToList();
+        var done = 0;
+        try
+        {
+            foreach (var t in todo)
+            {
+                AnalyzeStatus = $" · analyzing mood {done + 1} of {todo.Count}…";
+                var path = t.Path;
+                t.Profile = await Task.Run(() => AnalyzeQuietly(path, cts.Token), cts.Token);
+                if (++done % 20 == 0) _index.Save();
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            if (_analyze == cts) AnalyzeStatus = "";
+            if (done > 0) _index.Save();
+            if (SortBy == "Energy") View.Refresh();
+        }
+    }
+
+    private static SongProfile AnalyzeQuietly(string path, CancellationToken ct)
+    {
+        var thread = Thread.CurrentThread;
+        var priority = thread.Priority;
+        thread.Priority = ThreadPriority.Lowest; // playback and the UI come first
+        try { return SongAnalyzer.Analyze(path, ct); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException
+                                   or System.Runtime.InteropServices.COMException)
+        {
+            Log.Warn($"Analysis: {Path.GetFileName(path)}: {e.Message}");
+            return new SongProfile(null, "", 0, 0.5, 0, -70, 0, ""); // remembered, so it isn't retried on every start
+        }
+        finally { thread.Priority = priority; }
     }
 
     [RelayCommand]
@@ -223,6 +267,7 @@ public sealed partial class LibraryViewModel : ObservableObject
     {
         var fresh = _index.Refresh(old.Path);
         fresh.Tag = _tags.Get(fresh.TagKey);
+        fresh.Profile = old.Profile; // a tag edit leaves the audio alone
         var i = Tracks.IndexOf(old);
         if (i >= 0) Tracks[i] = fresh;
     }
@@ -253,7 +298,9 @@ public sealed partial class LibraryViewModel : ObservableObject
         return q.Length == 0
                || t.Title.Contains(q, StringComparison.OrdinalIgnoreCase)
                || t.Artist.Contains(q, StringComparison.OrdinalIgnoreCase)
-               || t.StyleTags.Contains(q, StringComparison.OrdinalIgnoreCase);
+               || t.StyleTags.Contains(q, StringComparison.OrdinalIgnoreCase)
+               || t.MoodText.Contains(q, StringComparison.OrdinalIgnoreCase)
+               || t.KeyText.Contains(q, StringComparison.OrdinalIgnoreCase);
     }
 
     private void ApplySort()
@@ -267,6 +314,7 @@ public sealed partial class LibraryViewModel : ObservableObject
                 "Artist" => new SortDescription(nameof(Track.Artist), ListSortDirection.Ascending),
                 "Duration" => new SortDescription(nameof(Track.Duration), ListSortDirection.Descending),
                 "BPM" => new SortDescription(nameof(Track.Bpm), ListSortDirection.Descending),
+                "Energy" => new SortDescription(nameof(Track.EnergyValue), ListSortDirection.Descending),
                 _ => new SortDescription(nameof(Track.Modified), ListSortDirection.Descending),
             });
         }

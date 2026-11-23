@@ -36,6 +36,23 @@ public sealed partial class Track : ObservableObject
     [property: JsonIgnore]
     private bool _isPlaying;
 
+    /// <summary>Whole-song analysis (mood, key, energy, loudness), filled in the background; cached with the
+    /// library, so it is redone only when the file changes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MoodText), nameof(KeyText), nameof(EnergyValue), nameof(ProfileTip))]
+    private SongProfile? _profile;
+
+    [JsonIgnore] public string MoodText => Profile?.Mood ?? "";
+    [JsonIgnore] public string KeyText => Profile?.Key ?? "";
+    /// <summary>Sort key: unanalyzed songs last.</summary>
+    [JsonIgnore] public double EnergyValue => Profile?.Energy ?? -1;
+    [JsonIgnore] public string? ProfileTip => Profile is not { } p ? null : p.Key.Length == 0 ? "Couldn't analyze this file (or it is silent)" :
+        (p.Mood is null ? "Too few clear chords for a mood\n" : "") +
+        $"Major {p.MajorShare:P0} · minor {1 - p.MajorShare:P0}\nEnergy {p.Energy:P0}\n" +
+        $"Key {(p.Key.Length > 0 ? $"{p.Key} ({Math.Max(0, p.KeyScore):P0} sure)" : "—")}\n" +
+        $"Chords {(p.TopChords.Length > 0 ? p.TopChords : "—")} · {p.ChangesPerMinute:0} changes/min\n" +
+        $"Loudness {(p.Lufs > -70 ? $"{p.Lufs:0.0} LUFS ({p.Lufs + 14:+0.0;-0.0} LU vs. streaming)" : "—")}";
+
     [JsonIgnore] public string TagKey => SunoId ?? Path;
     [JsonIgnore] public string DurationText => TitleText.Duration(Duration);
     [JsonIgnore] public string BpmText => Bpm?.ToString() ?? "";

@@ -73,4 +73,46 @@ public class HarmonyTests
         Harmony.Energy(-8, 4000).Should().Be(1);
         Harmony.Energy(-14, 2500).Should().BeApproximately(0.5, 0.01);
     }
+
+    /// <summary>Whole-song profile (Library mood column): 20 s of a held triad, stereo 48 kHz, fed in odd-sized chunks.</summary>
+    private static SongProfile Profile(double amplitude, params double[] hz)
+    {
+        var p = new SongProfiler();
+        var buf = new float[2 * 7001];
+        for (var start = 0; start < 20 * Rate; start += buf.Length / 2)
+        {
+            for (var i = 0; i < buf.Length / 2; i++)
+                buf[2 * i] = buf[2 * i + 1] = (float)hz.Sum(f => amplitude * Math.Sin(2 * Math.PI * f * (start + i) / Rate));
+            p.Process(buf);
+        }
+        return p.Result();
+    }
+
+    [Fact]
+    public void Song_profile_of_a_major_triad_is_major_and_named()
+    {
+        var p = Profile(0.25, 261.63, 329.63, 392.0);
+        p.MajorShare.Should().BeGreaterThan(0.95);
+        p.Mood.Should().NotBeNull().And.Match(m => m.StartsWith("Happy") || m.StartsWith("Warm"));
+        p.Key.Should().Be("C major");
+        p.TopChords.Should().StartWith("C");
+        p.Lufs.Should().BeInRange(-20, 0);
+    }
+
+    [Fact]
+    public void Song_profile_of_a_minor_triad_is_minor()
+    {
+        var p = Profile(0.25, 220, 261.63, 329.63);
+        p.MajorShare.Should().BeLessThan(0.05);
+        p.Mood.Should().NotBeNull().And.Match(m => m.StartsWith("Sad") || m.StartsWith("Dark"));
+        p.TopChords.Should().StartWith("Am");
+    }
+
+    [Fact]
+    public void Silent_song_has_no_mood_or_key()
+    {
+        var p = Profile(0);
+        p.Mood.Should().BeNull();
+        p.Key.Should().BeEmpty();
+    }
 }

@@ -132,4 +132,14 @@ public class TagIOTests : IDisposable
         Exporter.Export(TagIO.Read(src), copy);
         File.ReadAllBytes(copy).Should().Equal(File.ReadAllBytes(src));
     }
+
+    /// <summary>The Library's background analysis decodes any rate / channel count (8 kHz mono here) to 48 kHz stereo.</summary>
+    [Fact]
+    public void Song_analyzer_decodes_a_file()
+    {
+        var p = SongAnalyzer.Analyze(Wav());
+        p.Mood.Should().BeNull();
+        p.Key.Should().BeEmpty(); // silence
+        p.Version.Should().Be(SongProfile.CurrentVersion);
+    }
 }
