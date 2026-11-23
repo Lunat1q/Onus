@@ -62,6 +62,16 @@ public class AnalyticsCacheTests
         later.ToPlayItem()!.Source.IsFile.Should().BeTrue();
         new CloudClip(info, true, path).Status.Should().Be("On disk"); // a real download wins
     }
+
+    [Fact]
+    public void Row_is_the_current_song_whatever_copy_plays()
+    {
+        var row = new CloudClip(new ClipInfo { Id = Id, AudioLocked = true }, false);
+        row.Is(row.ToPlayItem()).Should().BeTrue();                                  // stream via Suno's player
+        row.Is(new PlayItem(Id.ToUpperInvariant(), "", "", new Uri("file:///c:/a.mp3"), null, "", 0, "c:/a.mp3")).Should().BeTrue(); // the download
+        row.Is(new PlayItem("7c9e6679-7425-40de-944b-e07fc1f90ae7", "", "", new Uri("file:///c:/b.mp3"), null, "", 0, null)).Should().BeFalse();
+        row.Is(null).Should().BeFalse();
+    }
 }
 
 public class AnalyticsRecorderTests

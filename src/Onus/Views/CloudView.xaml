@@ -154,6 +154,9 @@
                                     <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Art, Converter={StaticResource Img}, ConverterParameter=96}" />
                                 </Border.Background>
                             </Border>
+                            <Border CornerRadius="8" Background="#99000000" Visibility="{Binding IsPlaying, Converter={StaticResource Visible}}">
+                                <TextBlock Style="{StaticResource Glyph}" Text="&#xE995;" Foreground="White" />
+                            </Border>
                             <Button Style="{StaticResource IconButton}" Width="48" Height="48" Content="&#xF5B0;" Foreground="White"
                                     Background="Transparent" ToolTip="Play" Opacity="0.0" x:Name="PlayOverlay"
                                     Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
@@ -161,7 +164,17 @@
                         </Grid>
                         <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,16,0">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                                 <TextBlock Style="{StaticResource Glyph}" Text="&#xEB52;" FontSize="11" Margin="8,0,0,0"
                                            Foreground="{StaticResource Accent2Brush}"
                                            Visibility="{Binding IsLiked, Converter={StaticResource Visible}}" />

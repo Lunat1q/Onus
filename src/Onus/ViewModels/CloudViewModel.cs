@@ -67,6 +67,7 @@ public sealed partial class CloudViewModel : ObservableObject
         (_hideStudioClips, _publicOnly, _includeTrashed, _kind) = (f.HideStudioClips, f.PublicOnly, f.IncludeTrashed, f.Kind);
         (_tagsInclude, _tagsExclude, _search) = (f.TagsInclude, f.TagsExclude, f.Search);
 
+        player.TrackChanged += item => { foreach (var c in Clips) c.IsPlaying = c.Is(item); };
         Log.Written += (level, msg) => _ui.InvokeAsync(() =>
         {
             Activity.Insert(0, new LogLine(DateTime.Now.ToString("HH:mm:ss"), level, msg));
@@ -176,6 +177,7 @@ public sealed partial class CloudViewModel : ObservableObject
                 foreach (var info in kept.Where(k => _ids.Add(k.Id)))
                 {
                     var row = new CloudClip(info, onDisk.Contains(info.Id), AnalyticsCache.Find(_settings.DownloadFolder, info.Id));
+                    row.IsPlaying = row.Is(_player.Current);
                     Clips.Add(row);
                     if (sink is not null && !row.OnDisk && !info.AudioLocked) sink.TryWrite(row);
                 }

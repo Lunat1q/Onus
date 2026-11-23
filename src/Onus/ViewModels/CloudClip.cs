@@ -18,7 +18,8 @@ public sealed partial class CloudClip(ClipInfo info, bool onDisk, string? cacheP
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _isWorking;
     [ObservableProperty] private bool _failed;
-    [ObservableProperty] private string? _error = onDisk ? null : cachePath is not null ? CachedMessage : info.AudioLocked ? Services.Downloader.LockedMessage : null;
+    [ObservableProperty] private bool _isPlaying;
+    [ObservableProperty] private string? _error =onDisk ? null : cachePath is not null ? CachedMessage : info.AudioLocked ? Services.Downloader.LockedMessage : null;
 
     public string Title => TitleText.Display(Info.Title, Info.Prompt);
     public string Subtitle => Info.Tags.Length > 0 ? Info.Tags : Info.Description;
@@ -27,6 +28,9 @@ public sealed partial class CloudClip(ClipInfo info, bool onDisk, string? cacheP
     public string? Art => Info.ImageUrl;
     public bool CanStream => Info.AudioUrl is not null || Info.AudioLocked;
     public bool IsLiked => Info.IsLiked;
+
+    /// <summary>The player's item is this clip, whether it plays the stream, the capture or the downloaded file.</summary>
+    public bool Is(PlayItem? item) => item is not null && Info.Id.Equals(item.Key, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The analyzer just finished capturing this clip.</summary>
     public void MarkCached(string path)
