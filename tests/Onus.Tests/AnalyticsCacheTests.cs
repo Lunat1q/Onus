@@ -123,6 +123,32 @@ public class AnalyticsRecorderTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Fact]
+    public void Volume_at_zero_never_saves_silence()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "onus-rec-" + Guid.NewGuid().ToString("N"));
+        var tap = new Onus.Services.AudioTap();
+        using var rec = new Onus.Services.AnalyticsRecorder(tap, () => root);
+        try
+        {
+            rec.Tick(A, true, true, 0, 180, 0);
+            rec.IsRecording.Should().BeTrue();
+            tap.SetVolumes(1, 0);
+            rec.Tick(A, true, true, 0.1, 180, 0.1);
+            rec.IsRecording.Should().BeFalse();
+            rec.Tick(A, true, true, 0.2, 180, 0.2); // still muted at 0:00: no restart
+            rec.IsRecording.Should().BeFalse();
+            tap.SetVolumes(1, 0.0005);               // 0.05 %: quiet, still restorable
+            rec.Tick(A, true, true, 0.3, 180, 0.3);
+            rec.IsRecording.Should().BeTrue();
+        }
+        finally
+        {
+            rec.Dispose();
+            Directory.Delete(root, recursive: true);
+        }
+    }
 }
 
 public class WebPlayerMessageTests
@@ -148,4 +174,12 @@ public class AudioTapTests
         Onus.Services.AudioTap.FrontPair(raw, 8, 2f, stereo);
         stereo.Should().Equal(1f, -0.5f, 0.2f, 0.4f);
     }
+
+    [Theory]
+    [InlineData(1.0, 1f)]
+    [InlineData(0.01, 100f)]    // 1 % slider: was capped at ×20 (analysis 14 dB low)
+    [InlineData(0.001, 1000f)]
+    [InlineData(0.0, 10000f)]   // muted: bounded, nothing to restore anyway
+    public void Volume_is_divided_out_down_to_a_whisper(double volume, float gain) =>
+        Onus.Services.AudioTap.GainFor(volume).Should().BeApproximately(gain, gain * 1e-5f);
 }

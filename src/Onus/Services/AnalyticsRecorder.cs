@@ -40,12 +40,13 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         }
         // Not only on the switch itself: the old song's page keeps reporting its position until the new one loads,
         // and a dropped capture (seek, Previous) starts over once the song is back at 0:00.
-        if (_wav is null && !_settled && id is not null && position < 1) Begin(id, now);
+        if (_wav is null && !_settled && id is not null && position < 1 && !tap.WebMuted) Begin(id, now);
         _buf.Clear();
         var intact = tap.ReadNew(AudioTap.Web, ref _cursor, _buf);
         if (_wav is null) { State = null; return; }
 
         if (!intact) { Abort("audio buffer lost"); return; }
+        if (tap.WebMuted) { Abort("volume at 0"); return; }
         if (playing && AnalyticsCache.IsJump(_lastPos, position, now - _lastTime)) { Abort("seeked"); return; }
         _lastPos = position;
         _lastTime = now;

@@ -85,15 +85,28 @@ public sealed class AudioTap : IDisposable
         rec.StartRecording();
     }
 
-    /// <summary>Volumes the players apply (local = Windows media engine, web = suno.com's &lt;audio&gt;). Gain is
-    /// capped at +26 dB (volume 0.05): below that there's nothing meaningful left to restore.</summary>
-    // ponytail: assumes both volumes are linear amplitude (HTML media volume is; MediaPlayer.Volume behaves so).
+    /// <summary>Below this a player counts as muted (−80 dB): nothing left to restore.</summary>
+    public const double MinVolume = 1e-4;
+
+    private double _webVolume = 1;
+
+    /// <summary>Suno's page plays (next to) silent: a capture now would save silence.</summary>
+    public bool WebMuted => _webVolume < MinVolume;
+
+    /// <summary>Volumes the players apply (local = Windows media engine, web = suno.com's &lt;audio&gt;), divided
+    /// back out so the slider never changes analysis or captures. Both are linear and the capture is float, so
+    /// this is exact down to 0.1 % (measured: MediaPlayer.Volume 0.001 → exactly −60 dB at the tap).</summary>
+    // ponytail: volume arrives at 10 Hz, so a slider drag leaves a ~100 ms level blip; ramp the gain if it shows.
     public void SetVolumes(double local, double web)
     {
         lock (_gate)
-            for (var i = 0; i < _sources.Count; i++)
-                _sources[i].Src.Gain = (float)(1 / Math.Max(0.05, i == Onus ? local : web));
+        {
+            _webVolume = web;
+            for (var i = 0; i < _sources.Count; i++) _sources[i].Src.Gain = GainFor(i == Onus ? local : web);
+        }
     }
+
+    internal static float GainFor(double volume) => (float)(1 / Math.Max(MinVolume, volume));
 
     private void OnData(Source s, ReadOnlySpan<float> raw, bool silent)
     {
