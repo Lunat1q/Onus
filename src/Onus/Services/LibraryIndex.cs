@@ -17,9 +17,10 @@ public sealed class LibraryIndex
 
     public IReadOnlyCollection<Track> Tracks => _cache.Values;
 
-    /// <summary>Suno ids already on disk: what the Cloud page marks as downloaded and sync skips.</summary>
-    public HashSet<string> SunoIds() =>
-        _cache.Values.Select(t => t.SunoId).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Suno ids already downloaded: what the Cloud page marks as on disk and sync skips (captures don't count).</summary>
+    public HashSet<string> SunoIds(string folder) =>
+        _cache.Values.Where(t => !AnalyticsCache.IsCachePath(folder, t.Path)).Select(t => t.SunoId).OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public Task<List<Track>> ScanAsync(string folder, CancellationToken ct = default) => Task.Run(() =>
     {
@@ -31,17 +32,18 @@ public sealed class LibraryIndex
             {
                 ct.ThrowIfCancellationRequested();
                 if (!TagIO.AudioExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase)) continue;
-                if (AnalyticsCache.IsCachePath(folder, path)) continue;
+                if (path.EndsWith(AnalyticsCache.EncodingSuffix, StringComparison.OrdinalIgnoreCase)) continue;
                 var fi = new FileInfo(path);
                 next[path] = _cache.TryGetValue(path, out var hit) && hit.Size == fi.Length && hit.Modified == fi.LastWriteTimeUtc
                     ? hit
                     : TagIO.Read(path);
             }
         }
-        _cache = next;
-        try { JsonStore.Save(AppPaths.LibraryCache, next.Values.ToList()); }
+        var listed = AnalyticsCache.ForLibrary(folder, next.Values);
+        _cache = listed.ToDictionary(t => t.Path, StringComparer.OrdinalIgnoreCase);
+        try { JsonStore.Save(AppPaths.LibraryCache, listed); }
         catch (IOException e) { Log.Warn($"Library cache not saved: {e.Message}"); }
-        return next.Values.OrderByDescending(t => t.Modified).ToList();
+        return listed.OrderByDescending(t => t.Modified).ToList();
     }, ct);
 
     /// <summary>Re-read one file after an edit; returns the fresh track.</summary>

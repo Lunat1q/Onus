@@ -134,7 +134,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
     /// <summary>A song itself never reaches +6 dBFS: that is the player volume undone with the wrong gain.</summary>
     internal static bool OutOfStep(List<float> samples) => samples.Exists(x => Math.Abs(x) > 2);
 
-    private static string Encoding(string target) => Path.ChangeExtension(target, ".encoding.m4a");
+    private static string Encoding(string target) => Path.ChangeExtension(target, AnalyticsCache.EncodingSuffix);
 
     private static void TryDelete(string path)
     {

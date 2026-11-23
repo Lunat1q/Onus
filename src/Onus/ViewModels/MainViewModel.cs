@@ -60,6 +60,7 @@ public sealed partial class MainViewModel : ObservableObject
         analytics.Saved += (id, path) =>
         {
             cloud.OnCached(id, path);
+            _ = library.RescanAsync();
             ShowToast("Saved to the analytics cache: it now plays without Suno's player");
         };
         settingsPage.FolderChanged += () => _ = library.RescanAsync();

@@ -161,7 +161,7 @@ public sealed partial class CloudViewModel : ObservableObject
     {
         Clips.Clear();
         _ids.Clear();
-        var onDisk = _index.SunoIds();
+        var onDisk = _index.SunoIds(_settings.DownloadFolder);
         var source = IsSearch
             ? SelectedSource with { Source = SelectedSource.Source with { Id = SearchTerm, Rank = SearchRank.Key },
                                     Label = SearchTerm.Trim() is { Length: > 0 } t ? $"search \"{t}\"" : "public songs" }

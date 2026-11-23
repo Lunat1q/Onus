@@ -31,8 +31,9 @@
   (REC % in the spectrum header when it is). A seek / Previous, leaving early or a lost buffer drops it; pauses are fine. Complete
   (within 0.5 s of duration) → AAC 192 kbps `{download folder}/analytics/{clip id}.m4a`, tagged like a download
   (title, artist, style, year, comment, prompt, lyrics, `SUNO_UUID`, cover; details refetched if the list lacked them). The Suno row then says
-  *Analytics cache* and plays that file through the Windows player (no WebView). Library scan and Sync ignore the
-  folder; a real download still wins (*On disk*).
+  *Analytics cache* and plays that file through the Windows player (no WebView). The Library lists captures too
+  (rescanned when one is saved) and plays them like any file; Sync and *On disk* ignore the folder. A real download
+  still wins: it shows *On disk* and hides the capture from the Library.
 - **Marks**: keep / star / trash, keyed by Suno id (path for non-Suno files), same `tags.json` shape as SunoSync.
   Trash-marked songs are hidden from "All" and from Home stats.
 

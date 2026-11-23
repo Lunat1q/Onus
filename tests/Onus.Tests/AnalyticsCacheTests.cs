@@ -21,11 +21,24 @@ public class AnalyticsCacheTests
     public void Ignores_ids_that_are_not_suno_clip_ids(string id) => AnalyticsCache.PathFor(Root, id).Should().BeNull();
 
     [Fact]
-    public void Library_scan_skips_only_the_cache_folder()
+    public void Cache_folder_is_told_apart_from_downloads()
     {
         AnalyticsCache.IsCachePath(Root, Path.Combine(Root, "analytics", Id + ".m4a")).Should().BeTrue();
         AnalyticsCache.IsCachePath(Root, Path.Combine(Root, "analytics-songs", "a.mp3")).Should().BeFalse();
         AnalyticsCache.IsCachePath(Root, Path.Combine(Root, "Song.mp3")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Library_lists_captures_unless_the_song_was_downloaded()
+    {
+        const string other = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+        Track T(string path, string? id) => new() { Path = Path.Combine(Root, path), SunoId = id };
+        var captured = T(Path.Combine("analytics", Id + ".m4a"), Id);
+        var shadowed = T(Path.Combine("analytics", other + ".m4a"), other);
+        var download = T("Song.mp3", other.ToUpperInvariant());
+        var local = T("Mine.mp3", null);
+
+        AnalyticsCache.ForLibrary(Root, [captured, shadowed, download, local]).Should().Equal(captured, download, local);
     }
 
     [Theory]

@@ -17,10 +17,21 @@ public static class AnalyticsCache
     public static string? Find(string downloadFolder, string clipId) =>
         PathFor(downloadFolder, clipId) is { } p && File.Exists(p) ? p : null;
 
-    /// <summary>The library scan skips the cache: these are analysis copies, not downloads.</summary>
+    /// <summary>Inside the cache folder: listed in the library, but not a download (Sync and "On disk" ignore it).</summary>
     public static bool IsCachePath(string downloadFolder, string path) =>
         Path.GetFullPath(path).StartsWith(Path.GetFullPath(Folder(downloadFolder)) + Path.DirectorySeparatorChar,
             StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A capture still being encoded (renamed to {id}.m4a once tagged).</summary>
+    public const string EncodingSuffix = ".encoding.m4a";
+
+    /// <summary>The library lists captures too, except where a real download of the same clip exists.</summary>
+    public static List<Track> ForLibrary(string downloadFolder, IReadOnlyCollection<Track> tracks)
+    {
+        var downloaded = tracks.Where(t => !IsCachePath(downloadFolder, t.Path)).Select(t => t.SunoId).OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return tracks.Where(t => t.SunoId is null || !downloaded.Contains(t.SunoId) || !IsCachePath(downloadFolder, t.Path)).ToList();
+    }
 
     /// <summary>Present once the folder only holds captures made at the right level.</summary>
     public const string LevelMarker = ".level-v3";
