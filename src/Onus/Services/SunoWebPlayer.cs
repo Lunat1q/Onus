@@ -21,21 +21,27 @@ public sealed class SunoWebPlayer(SunoAuth auth)
           if (window.top !== window || !window.chrome?.webview) return;
           const post = m => window.chrome.webview.postMessage(m);
           const main = () => [...document.querySelectorAll('audio')].find(a => a.currentSrc && !/\/sil-\d+\./.test(a.currentSrc));
-          let vol = 1, started = false, done = false, last = 0;
-          const report = a => post({ t: 'time', pos: a.currentTime, dur: a.duration || 0, playing: !a.paused, vol: a.muted ? 0 : a.volume });
+          let vol = 1, started = false, done = false, last = 0, ours = false;
+          // Suno puts its own curve on the volume (0.8 → 0.46). Only Onus may set it, so the analyzer knows the
+          // exact gain to undo the moment it changes.
+          const volume$ = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
+          Object.defineProperty(HTMLMediaElement.prototype, 'volume', { configurable: true, enumerable: true,
+            get() { return volume$.get.call(this); }, set(v) { if (ours) volume$.set.call(this, v); } });
+          const setVolume = a => { ours = true; try { a.volume = vol; } finally { ours = false; } };
+          const report = a => post({ t: 'time', pos: a.currentTime, dur: a.duration || 0, playing: !a.paused });
           window.__onus = {
             // AbortError = a play() overtaken by a pause or a new load: harmless, the next event tells the truth
             play: () => main()?.play().catch(e => post({ t: e.name === 'AbortError' ? 'log' : 'error', m: 'play(): ' + e.name })),
             pause: () => main()?.pause(),
             seek: s => { const a = main(); if (a) a.currentTime = s; },
-            volume: v => { vol = v; const a = main(); if (a) a.volume = v; },
+            volume: v => { vol = v; const a = main(); if (a) setVolume(a); },
             stop: () => { done = true; main()?.pause(); },
           };
           const on = (type, fn) => document.addEventListener(type, e => { if (e.target === main()) fn(e.target); }, true);
           on('playing', a => {
             if (done) { a.pause(); return; }   // Suno moving on to its own next song after ours ended
             if (!started) post({ t: 'log', m: 'playing' });
-            started = true; a.volume = vol; report(a);
+            started = true; setVolume(a); report(a);
           });
           for (const type of ['pause', 'durationchange', 'seeked']) on(type, report);
           on('timeupdate', a => { if (Date.now() - last > 240) { last = Date.now(); report(a); } });
@@ -68,9 +74,6 @@ public sealed class SunoWebPlayer(SunoAuth auth)
     /// <summary>Position, duration (s), playing.</summary>
     public event Action<double, double, bool>? Progress;
 
-    /// <summary>The page's real &lt;audio&gt; volume (Suno applies its own curve over ours: 0.8 → 0.46), so the
-    /// analyzer can divide it out. 1 until the page reports.</summary>
-    public double ElementVolume { get; private set; } = 1;
     public event Action? Ended;
     public event Action<string>? Failed;
 
@@ -138,7 +141,6 @@ public sealed class SunoWebPlayer(SunoAuth auth)
         switch (m.Type)
         {
             case "time":
-                if (m.Volume is { } v) ElementVolume = v;
                 Progress?.Invoke(m.Position, m.Duration, m.Playing);
                 break;
             case "ended": Ended?.Invoke(); break;
@@ -150,7 +152,7 @@ public sealed class SunoWebPlayer(SunoAuth auth)
         }
     }
 
-    internal sealed record Message(string Type, double Position, double Duration, bool Playing, string Text, double? Volume = null);
+    internal sealed record Message(string Type, double Position, double Duration, bool Playing, string Text);
 
     /// <summary>Page → host message; null for anything malformed (the page is not trusted to be well-formed).</summary>
     internal static Message? Parse(string json)
@@ -163,8 +165,7 @@ public sealed class SunoWebPlayer(SunoAuth auth)
             double Num(string k) => r.TryGetProperty(k, out var v) && v.ValueKind == JsonValueKind.Number && double.IsFinite(v.GetDouble()) ? v.GetDouble() : 0;
             return new Message(t.GetString()!, Num("pos"), Num("dur"),
                 r.TryGetProperty("playing", out var p) && p.ValueKind == JsonValueKind.True,
-                r.TryGetProperty("m", out var msg) && msg.ValueKind == JsonValueKind.String ? msg.GetString()! : "",
-                r.TryGetProperty("vol", out var vol) && vol.ValueKind == JsonValueKind.Number ? Math.Clamp(vol.GetDouble(), 0, 1) : null);
+                r.TryGetProperty("m", out var msg) && msg.ValueKind == JsonValueKind.String ? msg.GetString()! : "");
         }
         catch (JsonException) { return null; }
     }

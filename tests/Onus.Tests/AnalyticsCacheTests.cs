@@ -124,31 +124,6 @@ public class AnalyticsRecorderTests
         }
     }
 
-    [Fact]
-    public void Volume_at_zero_never_saves_silence()
-    {
-        var root = Path.Combine(Path.GetTempPath(), "onus-rec-" + Guid.NewGuid().ToString("N"));
-        var tap = new Onus.Services.AudioTap();
-        using var rec = new Onus.Services.AnalyticsRecorder(tap, () => root);
-        try
-        {
-            rec.Tick(A, true, true, 0, 180, 0);
-            rec.IsRecording.Should().BeTrue();
-            tap.SetVolumes(1, 0);
-            rec.Tick(A, true, true, 0.1, 180, 0.1);
-            rec.IsRecording.Should().BeFalse();
-            rec.Tick(A, true, true, 0.2, 180, 0.2); // still muted at 0:00: no restart
-            rec.IsRecording.Should().BeFalse();
-            tap.SetVolumes(1, 0.0005);               // 0.05 %: quiet, still restorable
-            rec.Tick(A, true, true, 0.3, 180, 0.3);
-            rec.IsRecording.Should().BeTrue();
-        }
-        finally
-        {
-            rec.Dispose();
-            Directory.Delete(root, recursive: true);
-        }
-    }
 }
 
 public class WebPlayerMessageTests
@@ -156,10 +131,10 @@ public class WebPlayerMessageTests
     [Fact]
     public void Time_message_carries_the_pages_real_volume()
     {
-        var m = Onus.Services.SunoWebPlayer.Parse("""{"t":"time","pos":3.5,"dur":120,"playing":true,"vol":0.46}""")!;
-        (m.Position, m.Duration, m.Playing, m.Volume).Should().Be((3.5, 120.0, true, 0.46));
-        Onus.Services.SunoWebPlayer.Parse("""{"t":"time","vol":7}""")!.Volume.Should().Be(1);   // clamped
-        Onus.Services.SunoWebPlayer.Parse("""{"t":"time","vol":"x"}""")!.Volume.Should().BeNull();
+        var m = Onus.Services.SunoWebPlayer.Parse("""{"t":"time","pos":3.5,"dur":120,"playing":true}""")!;
+        (m.Position, m.Duration, m.Playing).Should().Be((3.5, 120.0, true));
+        Onus.Services.SunoWebPlayer.Parse("""{"t":"time","pos":"x"}""")!.Position.Should().Be(0);
+        Onus.Services.SunoWebPlayer.Parse("""[1]""").Should().BeNull();
     }
 }
 
@@ -179,7 +154,22 @@ public class AudioTapTests
     [InlineData(1.0, 1f)]
     [InlineData(0.01, 100f)]    // 1 % slider: was capped at ×20 (analysis 14 dB low)
     [InlineData(0.001, 1000f)]
-    [InlineData(0.0, 10000f)]   // muted: bounded, nothing to restore anyway
+    [InlineData(0.0, 100000f)]  // slider 0: the players run at −100 dB, the tap undoes exactly that
     public void Volume_is_divided_out_down_to_a_whisper(double volume, float gain) =>
         Onus.Services.AudioTap.GainFor(volume).Should().BeApproximately(gain, gain * 1e-5f);
+
+    [Fact]
+    public void Gain_rises_only_after_the_louder_audio_has_passed()
+    {
+        var delay = Onus.Services.AudioTap.GainFollower.Delay;
+        var g = new Onus.Services.AudioTap.GainFollower();
+        g.Set(1, 0);
+        g.At(0).Should().Be(1f);                   // first volume applies at once
+        g.Set(0, 10);                              // slider to 0: audio still in flight is loud …
+        g.At(10 + delay - 1).Should().Be(1f);      // … so no ×100 000 on it (would clip the capture)
+        g.Set(0, 10 + delay / 2);                  // re-sent each tick: doesn't restart the wait
+        g.At(10 + delay).Should().Be(100000f);
+        g.Set(1, 20 + delay);                      // turn-up: the gain must drop before louder audio arrives
+        g.At(20 + delay).Should().Be(1f);
+    }
 }

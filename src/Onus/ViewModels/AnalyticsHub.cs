@@ -35,6 +35,8 @@ public sealed class AnalyticsHub : IDisposable
     {
         (_player, _auth, _settings, _downloader, _findClip, _ui) = (player, auth, settings, downloader, findClip, ui);
         player.TrackChanged += _ => { Tap?.ResetTrack(); _failed = false; };
+        // At once, not on the next tick: a turn-up reaches the capture ~40 ms later and the gain must drop first.
+        player.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(PlayerViewModel.Volume)) Tap?.SetVolume(player.AppliedVolume); };
         _feed = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, (_, _) => Feed(), ui);
         _feed.Start();
     }
@@ -49,8 +51,7 @@ public sealed class AnalyticsHub : IDisposable
     {
         if (!Wanted) { Stop(); return; }
         if (Tap is null) { _ = StartAsync(); return; }
-        var (local, web) = _player.AppliedVolume;
-        Tap.SetVolumes(local, web);
+        Tap.SetVolume(_player.AppliedVolume);
         Recorder?.Tick(_player.Current?.Key, _player.ViaSuno, _player.IsPlaying, _player.Position, _player.Duration,
             _clock.Elapsed.TotalSeconds);
     }

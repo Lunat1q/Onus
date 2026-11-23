@@ -43,8 +43,9 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     /// <summary>The current song plays through suno.com's own player (stream-only clip).</summary>
     public bool ViaSuno => _viaWeb;
 
-    /// <summary>Volume actually applied to the current source, so the analyzer can divide it out.</summary>
-    public (double Local, double Web) AppliedVolume => (Volume, _web.ElementVolume);
+    /// <summary>Volume both players actually apply: the slider, but never below <see cref="AudioTap.MinVolume"/>, so
+    /// the analyzer can still divide it out at 0 (−100 dB is silent to the ear).</summary>
+    public double AppliedVolume => Math.Max(AudioTap.MinVolume, Volume);
 
     /// <summary>True while the user drags the seek bar, so the clock doesn't fight them.</summary>
     public bool IsSeeking { get; set; }
@@ -60,7 +61,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         _tags = tags;
         _settings = settings;
         _volume = settings.Volume;
-        _mp.Volume = _volume;
+        _mp.Volume = AppliedVolume;
 
         _mp.MediaEnded += (_, _) => _ui.InvokeAsync(() => Advance(auto: true));
         _mp.MediaFailed += (_, e) => _ui.InvokeAsync(() => OnFailed(string.IsNullOrWhiteSpace(e.ErrorMessage) // empty for HTTP refusals
@@ -167,8 +168,8 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
 
     partial void OnVolumeChanged(double value)
     {
-        _mp.Volume = value;
-        if (_viaWeb) _web.SetVolume(value);
+        _mp.Volume = AppliedVolume;
+        if (_viaWeb) _web.SetVolume(AppliedVolume);
         _settings.Volume = Math.Round(value, 2);
     }
 
@@ -236,7 +237,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
             ? RandomAccessStreamReference.CreateFromUri(new Uri(item.Art)) : null;
         d.Update();
 
-        _ = _web.PlayAsync(item.Source, Volume);
+        _ = _web.PlayAsync(item.Source, AppliedVolume);
     }
 
     private static async Task SetThumbnailAsync(MediaPlaybackItem playback, string? art)

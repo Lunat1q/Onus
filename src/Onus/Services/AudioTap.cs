@@ -30,7 +30,7 @@ public sealed class AudioTap : IDisposable
         public readonly float[] L = new float[Ring], R = new float[Ring];
         public long Written; // frames ever written; ring index = Written % Ring
         public long LastSound;
-        public float Gain = 1;          // undoes the player volume: analysis and captures describe the song itself
+        public readonly GainFollower Gain = new(); // undoes the player volume: analysis and captures describe the song itself
         public int Channels = 2;        // capture layout; only front L/R are kept
         public float[] Scaled = [];
     }
@@ -85,28 +85,51 @@ public sealed class AudioTap : IDisposable
         rec.StartRecording();
     }
 
-    /// <summary>Below this a player counts as muted (−80 dB): nothing left to restore.</summary>
-    public const double MinVolume = 1e-4;
+    /// <summary>Quietest volume the players get (−100 dB): slider 0 plays here, inaudible but still measurable.
+    /// Windows' media engine is exact down to it and floors anything lower there (measured).</summary>
+    public const double MinVolume = 1e-5;
 
-    private double _webVolume = 1;
-
-    /// <summary>Suno's page plays (next to) silent: a capture now would save silence.</summary>
-    public bool WebMuted => _webVolume < MinVolume;
-
-    /// <summary>Volumes the players apply (local = Windows media engine, web = suno.com's &lt;audio&gt;), divided
-    /// back out so the slider never changes analysis or captures. Both are linear and the capture is float, so
-    /// this is exact down to 0.1 % (measured: MediaPlayer.Volume 0.001 → exactly −60 dB at the tap).</summary>
-    // ponytail: volume arrives at 10 Hz, so a slider drag leaves a ~100 ms level blip; ramp the gain if it shows.
-    public void SetVolumes(double local, double web)
+    /// <summary>Volume both players apply (Windows media engine, suno.com's &lt;audio&gt;), divided back out so the
+    /// slider never changes analysis or captures. Both are linear and the capture is float, so this is exact
+    /// (measured to −100 dB). Call it the moment the volume changes: a turn-up must lower the gain in time.</summary>
+    public void SetVolume(double volume)
     {
+        var now = Stopwatch.GetTimestamp();
         lock (_gate)
-        {
-            _webVolume = web;
-            for (var i = 0; i < _sources.Count; i++) _sources[i].Src.Gain = GainFor(i == Onus ? local : web);
-        }
+            foreach (var (_, s) in _sources) s.Gain.Set(volume, now);
     }
 
     internal static float GainFor(double volume) => (float)(1 / Math.Max(MinVolume, volume));
+
+    /// <summary>
+    /// Gain that undoes the player volume. A volume change reaches the capture 40–52 ms after it is set
+    /// (measured), so a lower gain applies at once and a higher one only once the louder audio still in flight has
+    /// passed. A turn-down then leaves a short dip, never a ×100 000 burst in a capture.
+    /// </summary>
+    // ponytail: one fixed delay for both players; Chromium's path is unmeasured, so it has margin. Measure it if dips show.
+    internal sealed class GainFollower
+    {
+        public static readonly long Delay = Stopwatch.Frequency * 3 / 20; // 150 ms
+        private float _target = float.NaN; // NaN = never set: the first volume applies at once (nothing in flight)
+        private long _due;
+
+        public float Gain { get; private set; } = 1;
+
+        public void Set(double volume, long now)
+        {
+            var g = GainFor(volume);
+            if (g == _target) return; // re-sent every tick: only a change restarts the wait
+            if (float.IsNaN(_target) || g < Gain) Gain = g;
+            _target = g;
+            _due = now + Delay;
+        }
+
+        public float At(long now)
+        {
+            if (_target > Gain && now >= _due) Gain = _target;
+            return Gain;
+        }
+    }
 
     private void OnData(Source s, ReadOnlySpan<float> raw, bool silent)
     {
@@ -114,7 +137,7 @@ public sealed class AudioTap : IDisposable
         {
             var n = raw.Length / s.Channels * 2;
             if (s.Scaled.Length < n) s.Scaled = new float[n];
-            FrontPair(raw, s.Channels, s.Gain, s.Scaled);
+            FrontPair(raw, s.Channels, s.Gain.At(Stopwatch.GetTimestamp()), s.Scaled);
             ReadOnlySpan<float> samples = s.Scaled.AsSpan(0, n);
             float peak = 0;
             var clips = 0;
