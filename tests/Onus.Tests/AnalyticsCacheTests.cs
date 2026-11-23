@@ -44,6 +44,25 @@ public class AnalyticsCacheTests
         AnalyticsCache.IsJump(last, pos, elapsed).Should().Be(jump);
 
     [Fact]
+    public void Captures_from_before_the_level_fix_are_purged_once()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "onus-purge-" + Guid.NewGuid().ToString("N"));
+        var dir = Directory.CreateDirectory(AnalyticsCache.Folder(root)).FullName;
+        try
+        {
+            var old = Path.Combine(dir, Id + ".m4a");
+            File.WriteAllText(old, "quiet 1.0 capture");
+            AnalyticsCache.PurgeStale(root);
+            File.Exists(old).Should().BeFalse();
+
+            File.WriteAllText(old, "good capture");
+            AnalyticsCache.PurgeStale(root); // marker present: new captures stay
+            File.Exists(old).Should().BeTrue();
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public void Cached_stream_only_row_plays_its_capture()
     {
         var info = new ClipInfo { Id = Id, AudioLocked = true };

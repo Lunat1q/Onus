@@ -68,6 +68,7 @@ public sealed class AnalyticsRecorder(AudioTap tap, Func<string> downloadFolder,
         var folder = downloadFolder();
         if (AnalyticsCache.PathFor(folder, id) is not { } target || File.Exists(target)) { _settled = true; return; }
         var dir = Directory.CreateDirectory(AnalyticsCache.Folder(folder));
+        AnalyticsCache.PurgeStale(folder); // a fresh folder gets its marker before the first capture lands
         foreach (var stale in dir.EnumerateFiles("*.wav.part")) TryDelete(stale.FullName); // left by a crash or kill
         _target = target;
         _wavPath = target + ".wav.part";

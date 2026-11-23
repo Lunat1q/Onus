@@ -22,6 +22,25 @@ public static class AnalyticsCache
         Path.GetFullPath(path).StartsWith(Path.GetFullPath(Folder(downloadFolder)) + Path.DirectorySeparatorChar,
             StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Present once the folder only holds captures made at the right level.</summary>
+    public const string LevelMarker = ".level-v2";
+
+    /// <summary>Captures from Onus 1.0 came out ~13.5 dB low on surround devices (Windows' 8→2 downmix) and can't be
+    /// told apart from good ones, so drop every capture the folder held before the fix; the songs record again on
+    /// the next listen. Runs once per folder (marker file). Call when nothing is encoding into it.</summary>
+    // ponytail: bump the marker name if a future capture fix needs another purge.
+    public static void PurgeStale(string downloadFolder)
+    {
+        var dir = Folder(downloadFolder);
+        if (!Directory.Exists(dir) || File.Exists(Path.Combine(dir, LevelMarker))) return;
+        try
+        {
+            foreach (var f in Directory.EnumerateFiles(dir, "*.m4a")) File.Delete(f);
+            File.WriteAllText(Path.Combine(dir, LevelMarker), "");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { Log.Warn($"Analytics cache: purge failed: {e.Message}"); }
+    }
+
     /// <summary>Whole song captured: within half a second of its duration.</summary>
     public static bool IsComplete(double recordedSeconds, double duration) => duration > 0 && recordedSeconds >= duration - 0.5;
 

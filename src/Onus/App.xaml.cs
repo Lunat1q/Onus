@@ -28,6 +28,7 @@ public partial class App
 
         var settings = _settings = JsonStore.Load<Settings>(AppPaths.Settings);
         settings.PropertyChanged += (_, _) => SaveSettings();
+        AnalyticsCache.PurgeStale(settings.DownloadFolder);
 
         var ui = Dispatcher;
         var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
