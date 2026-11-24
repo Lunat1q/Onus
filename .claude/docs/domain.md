@@ -39,6 +39,15 @@
   Same format = byte copy (all tags, `SUNO_UUID` too); else Media Foundation decode → MP3 320 kbps / AAC 256 kbps / 16-bit WAV (resampled to
   44.1/48 kHz 16-bit when the encoders need it). Converted: tags, prompt, cover and sidecar lyrics carry over, `SUNO_UUID` does not
   (a converted copy saved in the library folder must not count as the download).
+- **Edit audio** (Library right-click → Edit audio… / Ctrl+E): the song decoded into memory at its own rate and channel
+  count. Click = cursor, drag / Shift+click = selection, wheel = zoom, Shift+wheel or the bar = scroll. Cut / copy / paste
+  (clipboard shared across songs of the same rate and channels), delete, trim to selection, cut before / after the cursor,
+  trim silence (< −50 dBFS ends), silence, fade in / out (S-curve; no selection = start→cursor / cursor→end), ±1 dB and
+  normalize (peak −1 dBFS; selection, else whole song), undo / redo (8 steps, whole-clip snapshots). Space previews the
+  selection or from the cursor through WASAPI at the player's volume (main player paused). **Save** re-encodes in the
+  file's own format (MP3 320 / AAC 256 / 16-bit WAV), copies the tags *with* `SUNO_UUID` (it's still the download), sends
+  the original to the Recycle Bin, then moves the new file in; the main player lets go of the file first. FLAC can only
+  be saved as a copy. **Save as copy** drops `SUNO_UUID` like Save as. Anything saved → Library rescan (new length, mood redone).
 - **Library mood / key**: after each rescan, every song without a current `SongProfile` is decoded and run through
   the analyzer's song-level math, one at a time on a lowest-priority thread (~1–2 s per song; status after the song
   count). Mood needs 15 s of chords (else blank); key is the whole song's mean chroma (the live panel uses a rolling

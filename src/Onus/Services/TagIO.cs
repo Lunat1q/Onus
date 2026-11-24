@@ -125,8 +125,9 @@ public static class TagIO
 
     /// <summary>Save as: carry the standard tags (title, artist, genre, year, comment, lyrics, cover…) and the prompt
     /// to a converted copy. The SUNO_UUID is left out on purpose: a copy saved into the library folder would
-    /// otherwise count as the download. No embedded cover → the sidecar/cached art, if any.</summary>
-    public static void CopyTags(Track from, string to)
+    /// otherwise count as the download (<paramref name="keepId"/>: the editor replacing the song itself keeps it).
+    /// No embedded cover → the sidecar/cached art, if any.</summary>
+    public static void CopyTags(Track from, string to, bool keepId = false)
     {
         using var src = TagLib.File.Create(from.Path, ReadStyle.Average);
         using var dst = TagLib.File.Create(to);
@@ -144,6 +145,7 @@ public static class TagIO
         t.Lyrics = string.IsNullOrWhiteSpace(s.Lyrics) ? from.Lyrics : s.Lyrics; // sidecar .txt lyrics travel too
         t.Pictures = s.Pictures;
         if (from.Prompt.Length > 0) SetCustom(t, "prompt", from.Prompt);
+        if (keepId && from.SunoId is { } id) SetCustom(t, UuidFrame, id);
         if (t.Pictures.Length == 0 && from.ArtPath is { } art && File.Exists(art))
             t.Pictures = [new Picture(art) { Type = PictureType.FrontCover, Description = "Cover" }];
         dst.Save();

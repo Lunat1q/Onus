@@ -55,6 +55,7 @@ public sealed partial class LibraryViewModel : ObservableObject
     }
 
     public string Folder => _settings.DownloadFolder;
+    public PlayerViewModel Player => _player;
 
     partial void OnSearchChanged(string value) => RefreshView();
     partial void OnTagFilterChanged(string? value) => RefreshView();

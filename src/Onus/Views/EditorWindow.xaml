@@ -1,0 +1,86 @@
+<Window x:Class="Onus.Views.EditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="clr-namespace:Onus.Views"
+        Title="Edit audio" Width="1180" Height="560" MinWidth="760" MinHeight="380" WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip" PreviewKeyDown="OnKey" Closing="OnClosing"
+        Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}" FontFamily="{StaticResource Body}">
+    <Window.Resources>
+        <Style x:Key="Tool" TargetType="Button" BasedOn="{StaticResource SubtleButton}">
+            <Setter Property="Padding" Value="11,6" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Focusable" Value="False" />
+        </Style>
+        <Style x:Key="ToolIcon" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Margin" Value="0,0,2,6" />
+        </Style>
+        <Style x:Key="Gap" TargetType="Border">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Margin" Value="6,0,10,6" />
+            <Setter Property="Background" Value="{StaticResource StrokeBrush}" />
+        </Style>
+    </Window.Resources>
+    <DockPanel Margin="22,18,22,16">
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="CopyButton" Style="{StaticResource SubtleButton}" Content="Save as copy…" Margin="0,0,10,0" Focusable="False"
+                        Tag="saveCopy" Click="OnAction" ToolTip="Ctrl+Shift+S" />
+                <Button x:Name="SaveButton" Style="{StaticResource AccentButton}" Content="Save" Focusable="False" Tag="save" Click="OnAction"
+                        ToolTip="Ctrl+S · replaces the song; the original goes to the Recycle Bin" />
+            </StackPanel>
+            <StackPanel>
+                <TextBlock x:Name="TitleText" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="FileText" Style="{StaticResource Muted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </DockPanel>
+
+        <WrapPanel x:Name="Tools" DockPanel.Dock="Top" Margin="0,0,0,4">
+            <Button x:Name="PlayButton" Style="{StaticResource ToolIcon}" Content="&#xE768;" Tag="play" Click="OnAction"
+                    ToolTip="Play / stop (Space) · plays the selection, else from the cursor" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE892;" Tag="home" Click="OnAction" ToolTip="Cursor to start (Home)" />
+            <Border Style="{StaticResource Gap}" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE7A7;" Tag="undo" Click="OnAction" ToolTip="Undo (Ctrl+Z)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE7A6;" Tag="redo" Click="OnAction" ToolTip="Redo (Ctrl+Y)" />
+            <Border Style="{StaticResource Gap}" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE8C6;" Tag="cut" Click="OnAction" ToolTip="Cut (Ctrl+X)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE8C8;" Tag="copy" Click="OnAction" ToolTip="Copy (Ctrl+C)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE77F;" Tag="paste" Click="OnAction"
+                    ToolTip="Paste at the cursor, or over the selection (Ctrl+V) · works across songs" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE74D;" Tag="delete" Click="OnAction" ToolTip="Delete selection (Del)" />
+            <Border Style="{StaticResource Gap}" />
+            <Button Style="{StaticResource Tool}" Content="Trim" Tag="trim" Click="OnAction" ToolTip="Keep only the selection (Ctrl+T)" />
+            <Button Style="{StaticResource Tool}" Content="Cut start" Tag="trimStart" Click="OnAction" ToolTip="Delete everything before the cursor ([)" />
+            <Button Style="{StaticResource Tool}" Content="Cut end" Tag="trimEnd" Click="OnAction" ToolTip="Delete everything after the cursor (])" />
+            <Button Style="{StaticResource Tool}" Content="Trim silence" Tag="trimSilence" Click="OnAction"
+                    ToolTip="Cut quiet lead-in and tail (below −50 dBFS)" />
+            <Button Style="{StaticResource Tool}" Content="Silence" Tag="silence" Click="OnAction" ToolTip="Mute the selection (Ctrl+L)" />
+            <Border Style="{StaticResource Gap}" />
+            <Button Style="{StaticResource Tool}" Content="Fade in" Tag="fadeIn" Click="OnAction"
+                    ToolTip="Over the selection, else from the start to the cursor (I)" />
+            <Button Style="{StaticResource Tool}" Content="Fade out" Tag="fadeOut" Click="OnAction"
+                    ToolTip="Over the selection, else from the cursor to the end (O)" />
+            <Button Style="{StaticResource Tool}" Content="−1 dB" Tag="quieter" Click="OnAction" ToolTip="Selection or whole song (Ctrl+Down)" />
+            <Button Style="{StaticResource Tool}" Content="+1 dB" Tag="louder" Click="OnAction" ToolTip="Selection or whole song (Ctrl+Up)" />
+            <Button Style="{StaticResource Tool}" Content="Normalize" Tag="normalize" Click="OnAction"
+                    ToolTip="Peak to −1 dBFS, selection or whole song (N)" />
+            <Border Style="{StaticResource Gap}" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE8A3;" Tag="zoomIn" Click="OnAction" ToolTip="Zoom in (+ or mouse wheel)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE71F;" Tag="zoomOut" Click="OnAction" ToolTip="Zoom out (−)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE71E;" Tag="zoomSel" Click="OnAction" ToolTip="Zoom to selection (Z)" />
+            <Button Style="{StaticResource ToolIcon}" Content="&#xE740;" Tag="fit" Click="OnAction" ToolTip="Whole song (F)" />
+        </WrapPanel>
+
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" Style="{StaticResource Muted}" Margin="0,10,0,0" TextTrimming="CharacterEllipsis" />
+        <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Muted}" Foreground="{StaticResource FaintBrush}" FontSize="11.5" Margin="0,8,0,0"
+                   Text="Click: cursor · drag or Shift+click: select · wheel: zoom · Shift+wheel: scroll · Ctrl+A: select all · Esc: clear selection" />
+        <ScrollBar x:Name="Scroll" DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,6,0,0" Scroll="OnScroll" />
+        <Border CornerRadius="10" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" ClipToBounds="True">
+            <Grid>
+                <v:Waveform x:Name="Wave" PreviewMouseLeftButtonUp="OnWaveClick" />
+                <TextBlock x:Name="LoadingText" Text="Decoding…" Style="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </DockPanel>
+</Window>

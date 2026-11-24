@@ -36,6 +36,7 @@ public partial class LibraryView : UserControl
             case Key.Enter: vm.PlayCommand.Execute(List.SelectedItem); break;
             case Key.Delete: vm.RecycleCommand.Execute(List.SelectedItems); break;
             case Key.C when ctrl: vm.CopyFilesCommand.Execute(List.SelectedItems); break;
+            case Key.E when ctrl: OnEditAudio(sender, e); break;
             default: return;
         }
         e.Handled = true;
@@ -45,6 +46,15 @@ public partial class LibraryView : UserControl
     {
         if (Vm is { } vm && sender is MenuItem { Tag: string ext })
             await vm.SaveAsAsync(List.SelectedItems.OfType<Track>().ToList(), ext);
+    }
+
+    /// <summary>Waveform editor for the selected song; anything saved → rescan (new length, mood redone, a copy listed).</summary>
+    private async void OnEditAudio(object sender, RoutedEventArgs e)
+    {
+        if (List.SelectedItem is not Track t || Vm is not { } vm) return;
+        var editor = new EditorWindow(t, vm.Player) { Owner = Window.GetWindow(this) };
+        editor.ShowDialog();
+        if (editor.Saved) await vm.RescanAsync();
     }
 
     private void OnEdit(object sender, RoutedEventArgs e)

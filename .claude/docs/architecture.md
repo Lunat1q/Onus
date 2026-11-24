@@ -17,6 +17,7 @@ src/Onus/
     Harmony.cs           # triad per chroma frame, per-song major/minor chord time, top chords, changes/min, energy → mood
     SongProfile.cs       # SongProfiler: the analyzer's song-level math over a whole file → SongProfile (mood, key, energy, LUFS)
     AnalyticsCache.cs    # {download folder}/analytics/{clip id}.m4a paths, completeness + seek rules
+    AudioEdit.cs         # AudioClip (interleaved float) + editor ops: crop/delete/insert/silence/gain/normalize/fade, audible range, peaks
     Jwt.cs, RateLimiter.cs, JsonStore.cs (temp file + move), Log.cs, AppPaths.cs, Settings.cs, Models.cs
   Services/
     SunoAuth.cs          # hidden WebView2 on suno.com; asks Clerk for a fresh JWT on demand (ADR 0002)
@@ -27,12 +28,14 @@ src/Onus/
     Downloader.cs        # resolve MP3/WAV, stream to .part, verify, move, tag, sidecars (.txt, .jpg, cover.jpg)
     TagIO.cs             # TagLib read/write; SUNO_UUID TXXX frame = the dedupe key; tag copy for Save as
     SongAnalyzer.cs      # decode a library file (Media Foundation → 48 kHz float stereo) through SongProfiler
-    Exporter.cs          # Library "Save as": copy or convert to MP3/WAV/M4A via Media Foundation (NAudio), tags carried
+    Exporter.cs          # Library "Save as": copy or convert to MP3/WAV/M4A via Media Foundation (NAudio), tags carried;
+                         # editor Decode → AudioClip, Write (in place: original to Recycle Bin, SUNO_UUID kept); ClipReader
     LibraryIndex.cs      # folder scan, cached by path+size+mtime
     Stores.cs            # TagStore (keep/star/trash), PromptStore, SunoSyncImport
   ViewModels/            # Main (nav/toast), Player, Library, Cloud(+CloudClip), PageViewModels (Dashboard, Vault, Settings),
                          # AnalyticsHub (app-lifetime owner of AudioTap + AnalyticsRecorder, 10 Hz feed)
-  Views/                 # XAML pages, PlayerBar, AnalyzerPanel (+AnalyzerDraw, Scope), SignInWindow, MetadataDialog, MiniPlayerWindow, Converters
+  Views/                 # XAML pages, PlayerBar, AnalyzerPanel (+AnalyzerDraw, Scope), SignInWindow, MetadataDialog, MiniPlayerWindow, Converters,
+                         # EditorWindow (Library "Edit audio": undo, clipboard, WASAPI preview, save) + Waveform (ruler, peaks, selection)
   Themes/Styles.xaml     # palette + pill/icon/chip/nav/row styles
   Assets/Onus.ico        # app icon (exe + windows); regenerate with tools/make_icon.py (Pillow)
 tests/Onus.Tests/        # Core logic, SunoClient/Downloader against a stub HttpMessageHandler, TagLib round trips

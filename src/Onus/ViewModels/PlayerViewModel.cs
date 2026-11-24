@@ -136,6 +136,7 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (Current is null) { if (_queue.Count > 0) PlayAt(0); return; }
         if (_viaWeb) { if (IsPlaying) _web.Pause(); else _web.Resume(); }
+        else if (_mp.Source is null) PlayAt(_index); // released for the editor
         else if (IsPlaying) _mp.Pause(); else _mp.Play();
     }
 
@@ -158,6 +159,17 @@ public sealed partial class PlayerViewModel : ObservableObject, IDisposable
         if (Current is null) return;
         CurrentTag = _tags.Toggle(Current.Key, tag);
         TagChanged?.Invoke(Current.Key, CurrentTag);
+    }
+
+    /// <summary>The editor is about to replace this file: let go of it (Windows' player keeps it open).
+    /// Play starts the song over from the new file.</summary>
+    public void Release(string path)
+    {
+        if (_viaWeb || !string.Equals(Current?.FilePath, path, StringComparison.OrdinalIgnoreCase)) return;
+        _mp.Pause();
+        _mp.Source = null;
+        IsPlaying = false;
+        Position = 0;
     }
 
     /// <summary>Called by the library when a mark is set from a row, so the bar stays in sync.</summary>

@@ -96,6 +96,7 @@
                               CommandParameter="{Binding PlacementTarget.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                     <Separator />
                     <MenuItem Header="Edit details…" Click="OnEdit" />
+                    <MenuItem Header="Edit audio…" InputGestureText="Ctrl+E" Click="OnEditAudio" />
                     <MenuItem Header="Save prompt to Vault" Command="{Binding SaveToVaultCommand}"
                               CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
                     <MenuItem Header="Show in Explorer" Command="{Binding ShowInExplorerCommand}"
